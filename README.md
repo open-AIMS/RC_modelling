@@ -1,4 +1,4 @@
-ReefCloud: a Scalable Framework for Predicting Coral Trends and Attribute Changes 
+A Scalable Framework for Predicting Coral Trends and Attribute Changes 
 =========================================================================================
 
 <!-- badges: start -->
@@ -13,7 +13,8 @@ ReefCloud: a Scalable Framework for Predicting Coral Trends and Attribute Change
 
 ## Content 
 
-In this repo, we will create the results associated with the simulation study. 
+In this repo, we will create the results associated with two case-studies (Australia in Appendix A) and (simulation in Appendix B). 
+Note that the data/ folder in Appendix_A needs to be added manually. Datasets can be found at XXX. 
 
 ## License
 
