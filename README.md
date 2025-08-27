@@ -14,13 +14,13 @@ A modelling framework for predicting coral trends and attributing drivers of cha
 ## Content 
 
 This repository contains the results for two case studies presented in the paper “A Modelling Framework for Predicting Coral Trends and Attributing Drivers of Change from Local to Global Scales”: 
-(i) Australia (Appendix_A) and (ii) a simulation study (Appendix_B).
+(1) Australia (`Appendix_A`) and (2) a simulation study (`Appendix_B`).
 
-**Note that the `data/` folder in Appendix_A needs to be added manually. Datasets can be found at TO_BE_ADDED.** 
+**Note that the `data/` folder in `Appendix_A` needs to be added manually. Datasets can be found at TO_BE_ADDED.** 
 
-In the Appendix_A folder, the code is stored in the `scripts/` directory. The scripts should be run in sequence. The final script, `8.report`, automatically generates the visualizations in HTML format (e.g., `quarto render 8.report.qmd`).
+In the `Appendix_A` folder, the code is stored in the `scripts/` directory. The scripts should be run in sequence. The final script, `8.report.qmd`, automatically generates the visualizations in HTML format (e.g., `quarto render 8.report.qmd`).
 
-In the Appendix_B folder, the appendix_B file contains the code to run the modelling pipeline for the four scenarios described in the paper. Once the pipeline has finished running, this file can be rendered to automatically visualize the results (e.g., `quarto render appendix_B.qmd`).
+In the `Appendix_B` folder, the `appendix_B.qmd` file contains the code to run the modelling pipeline for the four scenarios described in the paper. Once the pipeline has finished running, this file can be rendered to automatically visualize the results (e.g., `quarto render appendix_B.qmd`).
   
 ## License
 
