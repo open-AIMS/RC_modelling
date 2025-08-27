@@ -2,8 +2,8 @@
 # @author Julie Vercelloni
 # August 2025 
 
-#setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/for_andrew/scripts")
-setwd(paste0(here(), "/scripts"))
+rm(list=ls())
+setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
 rm(list=ls())
 

@@ -3,23 +3,14 @@
 # August 2025 
 
 rm(list=ls())
-#setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/for_andrew/scripts")
-
-setwd(paste0(here(), "/scripts"))
+setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
 # Load R package 
 source("../R/packages.R")
 source("../R/functions.R")
 
-# data.grp.tier.ready <- read.csv("data/data.grp.tier.csv") %>%
-#  filter(GROUP_DESC == "HARD CORAL") %>%
-#  dplyr::select(P_CODE, Tier2, Tier3, Tier4, Tier5, SITE_NO, LATITUDE, LONGITUDE, fYEAR, COUNT, TOTAL, max_cyc, max_cyc.lag1, max_cyc.lag2,
-#                    max_dhw, max_dhw.lag1, max_dhw.lag2)
-
-# write.csv(data.grp.tier.ready, file = "data/data.grp.tier.ready.csv", row.names = F)
-
 # Read the data
-data.grp.tier.ready <- read.csv("../data/data.grp.tier.ready.csv")
+data.grp.tier.ready <- read.csv("../data/reef_data.csv")
 
 HexPred_reefid2 <- st_read("../data/hexpred.shp") |>
  rename(max_cyc_lag1 = mx_cy_1,

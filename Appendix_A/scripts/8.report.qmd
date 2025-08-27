@@ -74,21 +74,14 @@ knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
 To be displayed on a big screen. 
 :::
 
-**This document contains additional results associated with the paper *ReefCloud: A Scalable Framework for Predicting Coral Trends and Attribute Changes*.** 
-
-**R codes associated with the paper findings are available located on the [GitHub](https://github.com/open-AIMS/RC_modelling) repository.**   
-
-
 ```{r}
 #| include: false
 #| echo: false
 #| eval: true
 #| cache: false
 
-setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/for_andrew/scripts")
-#setwd(paste0(here(), "/scripts"))
-
 rm(list=ls())
+setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
 # Load R package 
 source("../R/packages.R")
@@ -121,14 +114,6 @@ print_attr_plots(appendix_dir, "trend_data_all_")
 #| fig-cap: Examples of estimated coral trends at predictive-tiers from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
 print_attr_plots(appendix_dir, "trend_data_no_data")
 ```
-<!-- ```{r, fig.width=10, fig.height=8}
-#| label: fig-trends_extra
-#| eval: true
-#| echo: false
-#| fig-cap: Regional (top panels) and sub-regional (bottom panels) coral cover trends under different tier aggregations with a) All tiers (Data-tiers + Prediction-tiers), b) Data-tiers only (locations with monitoring observations), c) inshore vs. offshore reefs across all tiers, and d) inshore vs. offshore reefs restricted to Data-tiers. Solid lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. The percent value indicates the proportion of data-tiers across the Wet Tropics.
-print_attr_plots(appendix_dir, "trends_extra")
-``` -->
-
 
 ```{r, fig.width=14, fig.height=18}
 #| label: fig-pred_new
