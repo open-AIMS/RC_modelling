@@ -1,0 +1,285 @@
+---
+title: "Appendix A"
+subtitle: "CASE‐STUDY 1: NORTHERN AUSTRALIA"
+authors:
+  - name: Julie Vercelloni
+    corresponding: true
+    email: j.vercelloni@aims.gov.au
+    affiliations:
+      - ref: aims
+      - ref: qut
+  - name: Murray Logan
+    affiliations:
+      - ref: aims
+  - name: Andrew Zammit‐Mangion
+    affiliations:
+      - ref: UOW
+      - ref: KAUST
+  - name: Matthew Sainsbury‐Dale
+    affiliations:
+      - ref: UOW
+      - ref: KAUST
+  - name: Kerrie Mengersen
+    affiliations:
+      - ref: qut
+  - name: Manuel González‐Rivero
+    affiliations:
+      - ref: aims
+affiliations:
+  - id: aims
+    name: Australian Institute of Marine Science, Townsville, Australia
+  - id: qut
+    name: Centre for Data Science, Queensland University of Technology, Brisbane, Australia
+  - id: UOW
+    name: School of Mathematics and Applied Statistics, University of Wollongong, Wollongong, Australia
+  - id: KAUST
+    name: King Abdullah University of Science and Technology, Thuwal, Saudi Arabia
+engine: knitr
+format:
+  html:
+    toc: true
+    toc-location: left
+    title-block-banner: true
+    toc-depth: 3
+    highlight-style: atom-one
+    embed-resources: true
+    theme:
+      light: flatly
+      dark: darkly
+    code-overflow: wrap
+    code-fold: false
+    number-sections: true
+    number-depth: 2
+    shift-heading-level-by: -1
+    crossref:
+      lst-title: Code listing
+    fig-align: center
+    text-align: center
+    acm-html: default
+css: styles.css
+execute: 
+  message: false
+  warning: false
+  cache: true
+editor:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, chunkOpts, echo = FALSE}
+knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
+#knitr::opts_knit$set(root.dir = "..")
+```
+::: {.callout-important}
+To be displayed on a big screen. 
+:::
+
+**This document contains additional results associated with the paper *ReefCloud: A Scalable Framework for Predicting Coral Trends and Attribute Changes*.** 
+
+**R codes associated with the paper findings are available located on the [GitHub](https://github.com/open-AIMS/RC_modelling) repository.**   
+
+
+```{r}
+#| include: false
+#| echo: false
+#| eval: true
+#| cache: false
+
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/for_andrew/scripts")
+#setwd(paste0(here(), "/scripts"))
+
+rm(list=ls())
+
+# Load R package 
+source("../R/packages.R")
+source("../R/functions.R")
+```
+
+```{r}
+#| include: true
+#| echo: false
+#| eval: true
+#| cache: false
+appendix_dir <- "../figures" 
+```
+
+
+#### Coral cover predictions at multiple scales
+
+```{r, fig.width=15, fig.height=15}
+#| label: fig-trend_data_all_
+#| eval: true
+#| echo: false
+#| fig-cap: Estimated coral trends at the data-tier level from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show observed coral cover averaged at the tier level, which were used as the response variable in the spatio-temporal model.
+print_attr_plots(appendix_dir, "trend_data_all_")
+``` 
+
+```{r, fig.width=15, fig.height=15}
+#| label: fig-trend_data_no_data
+#| eval: true
+#| echo: false
+#| fig-cap: Examples of estimated coral trends at predictive-tiers from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+print_attr_plots(appendix_dir, "trend_data_no_data")
+```
+<!-- ```{r, fig.width=10, fig.height=8}
+#| label: fig-trends_extra
+#| eval: true
+#| echo: false
+#| fig-cap: Regional (top panels) and sub-regional (bottom panels) coral cover trends under different tier aggregations with a) All tiers (Data-tiers + Prediction-tiers), b) Data-tiers only (locations with monitoring observations), c) inshore vs. offshore reefs across all tiers, and d) inshore vs. offshore reefs restricted to Data-tiers. Solid lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. The percent value indicates the proportion of data-tiers across the Wet Tropics.
+print_attr_plots(appendix_dir, "trends_extra")
+``` -->
+
+
+```{r, fig.width=14, fig.height=18}
+#| label: fig-pred_new
+#| eval: true
+#| echo: false
+#| fig-cap: Predicted coral cover values across the Wet Tropics for each year between 2006-2024. Values correspond to the posterior means. 
+print_attr_plots(appendix_dir, "pred_new")
+``` 
+
+```{r, fig.width=14, fig.height=18}
+#| label: fig-pred_unc
+#| eval: true
+#| echo: false
+#| fig-cap: Uncertainty associated with predictions across the Wet Tropics for each year between 2006-2024. Values correspond to the posterior credible intervals.
+print_attr_plots(appendix_dir, "pred_unc")
+``` 
+
+#### Attribution of coral loss
+
+
+```{r, fig.width=8, fig.height=6}
+#| label: fig-coef_
+#| eval: true
+#| echo: false
+#| fig-cap: Effect sizes (in logit scale) of the model covariates. The points represent the estimated effect and the intervals represent the corresponding 95% confidence intervals. 
+print_attr_plots(appendix_dir, "coef_")
+``` 
+
+#### Model validation diagnostics 
+
+##### Model fit
+```{r, fig.width=6, fig.height=5}
+#| label: fig-model_fit
+#| eval: true
+#| echo: false
+#| fig-cap: Model goodness-of-fit. Coral cover observations were used to train the spatio-temporal model. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line. 
+print_attr_plots(appendix_dir, "model_fit")
+``` 
+
+##### Model residuals diagnostics 
+
+```{r, fig.width=6, fig.height=5}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: p_res
+#| tbl-cap: Diagnostics of model residuals.
+print_attr_plots(appendix_dir, "dharma_residuals")
+```
+
+##### Leave-out-data analysis
+The leave-out data approach is used to evaluate the influence of specific observations using prediction-performance measures. The full model is fitted on a train dataset composed of a random sample of observations and prediction-performance measures are computed on the leave-out observations.   
+
+We found that the predictive performance of the spatio-temporal model is more sensitive to the number of monitoring locations, with accuracy declining when sites or reefs are removed from the dataset (@fig-p_perf). In contrast, model performance is less affected by the number of replicated years.
+
+Five validation tests are developed: 
+
+* 1. rm(20% obs): 20% of data were randomly removed without structure.
+* 2. rm(20% reef): 20% of reefs were randomly removed.
+* 3. rm(20% site): 20% of sites were randomly removed.
+* 4. rm(20% transect):  20% of transects were randomly removed.
+* 5. rm(5YRS): 5 years of observations were removed within each location (locations with less than 4 years of data were not used). 
+
+Four predictive measures are used: 
+
+* 95% coverage interval (Cvg): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
+
+$$
+\text{coverage95}(z, \ell, u) \;=\; 
+\left| 0.95 \;-\; \frac{1}{n} \sum_{i=1}^{n} \mathbf{1}\!\left( \ell_i < z_i < u_i \right) \right|
+$$
+
+where $z = \{z_1, z_2, \dots, z_n\}$ are the coral cover observations, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $\mathbf{1}(\cdot)$ is the indicator function (1 if the condition is true, 0 otherwise).
+
+* 95% interval score (IS): rewards prediction intervals that include the true observations (accuracy) and penalizes those that are too narrow or too wide (precision). It is computed as follow: 
+
+$$
+\text{IS}_{95} \;=\; \frac{1}{n} \sum_{i=1}^{n} 
+\Bigg[
+(u_i - \ell_i)
++ \frac{2}{\alpha} (\ell_i - y_i)\,\mathbf{1}(y_i < \ell_i)
++ \frac{2}{\alpha} (y_i - u_i)\,\mathbf{1}(y_i > u_i)
+\Bigg]
+$$
+
+where $\alpha = 0.05$, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $y$ are observed coral cover. 
+
+* Root-mean-squared prediction error (RMSPE) - how far off model predictions are from true observations without considering for uncertainty.
+
+$$
+\text{RMSPE} \;=\; \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 }
+$$
+
+where $y$ and $\hat{y}$ are the observed and predicted coral cover values, respectively, and $n$ the total number of observations. 
+
+* Continuous Ranked Probability Score (CRPS) - represents the quality of the predictions over the entire predictive probability distribution penalizing predictions that are inaccurate, imprecise or overconfident.  
+
+$$
+\text{CRPS}(F, y) \;=\; \sigma \left[ 
+z \left( 2 \Phi(z) - 1 \right) \;+\; 2 \,\phi(z) \;-\; \frac{1}{\sqrt{\pi}}
+\right],
+\quad z = \frac{y - \mu}{\sigma}
+$$
+
+where $y$ is the observed coral cover values, $\mu$ and $\sigma$ are the mean and the standard deviation of the predictive normal distribution, $\phi(.)$ represented the standard normal probability density function and $\Phi$ the cumulative distribution function. 
+
+These predictive measures give a single number with low scores representing better performances. 
+
+```{r, fig.width=5.5, fig.height=6}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-p_perf
+#| fig-cap: Metrics of model predictive performance by tests. Each axis represents one of the evaluation metrics described above. The length of each arm represents the model predictive performance on that metric for a given test, with values scaled from 1 (poor) to 0 (best). Overall, better predictive performances of the models are indicated by smaller polygons. 
+print_attr_plots(appendix_dir, "pperf")
+```
+
+##### Basis function exploratory analysis
+The aim of this analysis is to explore the influence of the basis function formulation with a focus on the temporal dimension. To do this, we compare four model performance using different number of basis functions in the temporal basis function: 
+
+* Full: number and location of temporal basis functions automatically estimated from the FRK function and adopted by ReefCloud.
+* 5: five temporal basis functions randomly selected from the FRK auto basis function. 
+* 3: three temporal basis functions randomly selected from the FRK auto basis function. 
+* 1: one temporal basis function randomly selected from the FRK auto basis function. 
+
+We found that the estimation of regional trends (@fig-bf-region) is more strongly influenced by the number of temporal basis functions, whereas the attribution of coral loss (@fig-bf-dist) is less affected.
+
+
+```{r, fig.width=6, fig.height=5}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-bf-temp
+#| fig-cap: Locations of the basis functions for each model with a) Default, b) 5, c) 3 and d) 1. 
+print_attr_plots(appendix_dir, "viz_basisfunction")
+```
+
+```{r, fig.width=8, fig.height=6}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-bf-region
+#| fig-cap: Regional trends predicted by the spatio-temporal models. Solid lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+print_attr_plots(appendix_dir, "basisfunction_tier4")
+```
+
+```{r, fig.width=8, fig.height=6}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-bf-dist
+#| fig-cap: Estimated effect sizes of disturbance effects. The points represent the estimated effect and the intervals represent the corresponding 95% confidence intervals.  
+print_attr_plots(appendix_dir, "basisfunction_coef")
+```
