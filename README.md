@@ -1,4 +1,4 @@
-A modelling framework for predicting coral trends and attributing drivers of change from local to global scales
+Appendices
 =========================================================================================
 
 <!-- badges: start -->
@@ -13,7 +13,7 @@ A modelling framework for predicting coral trends and attributing drivers of cha
 
 ## Content 
 
-This repository contains the results for two case studies presented in the paper “A Modelling Framework for Predicting Coral Trends and Attributing Drivers of Change from Local to Global Scales”: 
+This repository contains the results for two case studies presented in the paper “A modelling framework for predicting coral trends and attributing drivers of change from local to global scales”: 
 (1) Australia (`Appendix_A`) and (2) a simulation study (`Appendix_B`).
 
 **Note that the `data/` folder in `Appendix_A` needs to be added manually. Datasets can be found at TO_BE_ADDED.** 
