@@ -8,7 +8,7 @@ extra_scenarios/
 High-resolution/
 Low-resolution/
 Medium-resolution/
-Sparse-temporal/
+Temporally_sparse/
 
 *.pdf
 *.zip
