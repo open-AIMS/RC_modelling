@@ -1,4 +1,4 @@
-A Scalable Framework for Predicting Coral Trends and Attribute Changes 
+A Modelling Framework for Predicting Coral Trends and Attributing Drivers of Change from Local to Global Scales
 =========================================================================================
 
 <!-- badges: start -->
