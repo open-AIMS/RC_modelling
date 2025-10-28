@@ -362,25 +362,44 @@ pal_unc<- wes_palette("Zissou1", 100, type = "continuous")
 return(p_unc)
 }
 
-plot_traj <- function(dat, dat_pred){
+plot_traj <- function(pred_df, unique_tier){
 p_traj <- ggplot() + 
-  geom_line(data = dat, aes(x = fYEAR, y = (COUNT/TOTAL)*100, group = interaction(as.factor(TRANSECT_NO), REEF_NAME)), 
-            show.legend = FALSE, linewidth=.1, col="grey30") + 
-  geom_ribbon(data = dat_pred, aes(x=fYEAR,ymin=.lower*100, ymax=.upper*100, group=1),alpha=.2, fill ="#72b0d3") +
-  geom_line(data = dat_pred, aes(x=fYEAR, y=pred*100, group=1),size=.4) +
+   geom_ribbon(data = pred_df %>% filter(tier %in% unique_tier), 
+                      aes(x=as.numeric(fYEAR),ymin=.lower*100, ymax=.upper*100, group=1),alpha=.3, fill ="#72b0d3") +
+  geom_point(data = pred_df %>% filter(tier %in% unique_tier), 
+                   aes(x = as.numeric(fYEAR), y = (COUNT_t / TOTAL_t)*100), fill = "grey66", col = "black", size = 2.5, alpha = .6, shape = 20) + 
+ geom_line(data = pred_df %>% filter(tier %in% unique_tier), 
+                    aes(x=as.numeric(fYEAR), y=pred*100, group=1),size=.8) + 
   facet_wrap(~tier, ncol=3) +
-  ylab("Cover") + xlab("Year")+
-  theme_pubr() + 
-  theme(axis.text.x = element_text(size=8, angle = 90, hjust = 1),
-        axis.text.y = element_text(size=8),axis.title.y=element_text(size=11),
-        axis.title.x=element_text(size=11),
+  ylab("Coral cover (%)") + xlab("Year") +  theme_pubr() +
+  theme(axis.text.x = element_text(size=10, angle = 45, hjust = 1),legend.position = "right",
+        axis.text.y = element_text(size=10),axis.title.y=element_text(size=12),
+        axis.title.x=element_text(size=12),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         strip.background = element_rect(fill = 'white')) +
-  scale_x_discrete(breaks= nth_element(unique(dat$fYEAR),1,4))
+    scale_y_continuous(
+      breaks = seq(0, 100, by = 20)
+    )
 
-return(p_traj)
+p_traj_no <- ggplot(pred_df %>% filter(tier %in% unique_tier)) + 
+  geom_ribbon(aes(x=as.numeric(fYEAR),ymin=.lower*100, ymax=.upper*100, group=1),alpha=.9, fill= "#D68A8A") +
+  geom_line(aes(x=as.numeric(fYEAR), y=pred*100, group=1), linewidth=.6) +
+  facet_wrap(~tier) + 
+  ylab("Coral cover (%)") + xlab("Year") +  theme_pubr() +
+  theme(axis.text.x = element_text(size=10, angle = 45, hjust = 1),legend.position = "right",
+        axis.text.y = element_text(size=10),axis.title.y=element_text(size=12),
+        axis.title.x=element_text(size=12),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = 'white')) +
+    scale_y_continuous(
+      breaks = seq(0, 100, by = 20)
+    )
+
+return(list(p_traj = p_traj, p_traj_no = p_traj_no))
 }
+
 
 plot_traj_broad <- function(dat, GRMF_all){
 plot_traj_broad <- ggplot() +
@@ -438,6 +457,25 @@ crps <- function(obs, pred, ...){
   return(list(crps = crps, CRPS = mean(crps, na.rm = TRUE), ign = ign, IGN = mean(ign), pit = pit) )
   
 }
+
+#################################
+############# extract disturbance effects
+#################################
+
+
+cov_extract <- function(model.out, obj_frk){
+
+coef_table_all <- FRK::coef_uncertainty(model.out, percentiles = c(2.5, 50, 97.5), nsim = 400, 
+  random_effects = TRUE)%>%
+  data.frame() %>%
+  tibble::rownames_to_column() %>%
+  tidyr::pivot_longer(cols =  !rowname, names_to = "param", values_to = "value")%>%
+  mutate(Type = ifelse(str_starts(param, "X.Intercept"), "random", "fixed")) %>%
+  tidyr::pivot_wider(names_from = rowname, values_from = value)
+
+return(coef_table_all)
+}
+
 
 #################################
 ############# automated report
@@ -532,217 +570,3 @@ print_attr_plots_level3 <- function(list_folders, name_plot, subtitle = FALSE, p
   return(combined_mod)
 }
 
-# Adapted from https://github.com/Ringomed/ggvanced/blob/main/R/ggspider.R
-ggspider_2 <- function(p_data,
-                     ci_data = NULL,
-                     polygon = TRUE,
-                     scaled = FALSE,
-                     draw_axis = TRUE,
-                     n_labels = 5,
-                     zero_centered = FALSE,
-                     subset = NULL,
-                     reorder_axis = NULL,
-                     background_color = "gray99",
-                     area_fill = TRUE,
-                     fill_opacity = 0.05,
-                     central_distance = 0.2,
-                     axis_name_offset = 0.2,
-                     digit_rounding = 2,
-                     axis_label_font_size = NULL,
-                     axis_label_font_face = NULL,
-                     axis_name_font_size = NULL,
-                     axis_name_font_face = NULL
-){
-
-  legend_title <- names(p_data)[[1]]
-  p_data <- p_data %>% dplyr::rename(group = 1) %>% dplyr::mutate(group = factor(group))
-
-  if(zero_centered == TRUE){
-    zero_tibble <- tibble::as_tibble(as.list(setNames(rep(0, ncol(p_data)), names(p_data)))) %>% dplyr::mutate(group = "zero_centered")
-    p_data <- p_data %>% dplyr::bind_rows(zero_tibble)
-  }
-  
-  if(!is.null(reorder_axis)){
-    p_data <- p_data %>% dplyr::mutate(dplyr::across(dplyr::all_of(reorder_axis), ~ -.))
-
-    if(!is.null(ci_data)){
-      ci_data <- ci_data %>%
-        dplyr::mutate(c = min,
-               min = dplyr::case_when(parameter %in% reorder_axis ~ -max, TRUE ~ min),
-               max = dplyr::case_when(parameter %in% reorder_axis ~ -c, TRUE ~ max))
-    }
-  }
-
-
-  if(!is.null(ci_data)){
-    ci_data <- ci_data %>% dplyr::rename(group = 1, parameter = 2)
-  }
-
-  circle_coords <- function(r, n_axis = ifelse(polygon == TRUE, ncol(p_data) - 1, 100)){
-    fi <- seq(0, 2*pi, (1/n_axis)*2*pi) + pi/2
-    x <- r*cos(fi)
-    y <- r*sin(fi)
-
-    tibble::tibble(x, y, r)
-  }
-
-  step_1 <- purrr::map_df(seq(0, 1, 0.25) + central_distance, circle_coords) %>%
-      ggplot2::ggplot(ggplot2::aes(x, y)) +
-      ggplot2::geom_polygon(data = circle_coords(1 + central_distance), alpha = 1, fill = background_color, lty = 2) +
-      ggplot2::geom_path(ggplot2::aes(group = r), lty = 2, alpha = 0.5) +
-      ggplot2::theme_void()
-
-
-  axis_coords <- function(n_axis){
-    fi <- seq(0, (1 - 1/n_axis)*2*pi, (1/n_axis)*2*pi) + pi/2
-    x1 <- central_distance*cos(fi)
-    y1 <- central_distance*sin(fi)
-    x2 <- (1 + central_distance)*cos(fi)
-    y2 <- (1 + central_distance)*sin(fi)
-
-    tibble::tibble(x = c(x1, x2), y = c(y1, y2), id = rep(1:n_axis, 2))
-  }
-
-  if(is.null(ci_data)){
-    text_data <- p_data %>%
-      dplyr::select(-group) %>%
-      purrr::map_df(~ min(.) + (max(.) - min(.)) * seq(0, 1, 1/(n_labels - 1))) %>%
-      dplyr::mutate(r = seq(0, 1, 1/(n_labels - 1))) %>%
-      tidyr::pivot_longer(-r, names_to = "parameter", values_to = "value")
-  }else{
-    text_data <-
-      p_data %>%
-      dplyr::select(-group) %>%
-      purrr::map_df(~ min(.) + (max(.) - min(.)) * seq(0, 1, 1/(n_labels - 1))) %>%
-      dplyr::mutate(r = seq(0, 1, 1/(n_labels - 1))) %>%
-      tidyr::pivot_longer(-r, names_to = "parameter", values_to = "value") %>%
-      dplyr::select(r, parameter) %>%
-      dplyr::left_join(
-        ci_data %>%
-        dplyr::group_by(parameter) %>%
-        dplyr::reframe(min = min(min), max = max(max)) %>%
-        dplyr::group_by(parameter) %>%
-        dplyr::mutate(data = list(tibble::tibble(r = seq(0, 1, 1/(n_labels - 1)), value = min + (max-min)*r))) %>%
-        tidyr::unnest("data") %>%
-        dplyr::select(r, parameter, value) %>%
-        dplyr::arrange(r), by = c("parameter", "r")
-      )
-  }
-
-  text_coords <- function(r, n_axis = ncol(p_data) - 1){
-    fi <- seq(0, (1 - 1/n_axis)*2*pi, (1/n_axis)*2*pi) + pi/2 + 0.01*2*pi/r
-    x <- r*cos(fi)
-    y <- r*sin(fi)
-
-    tibble::tibble(x, y, r = r - central_distance)
-  }
-
-  labels_data <- purrr::map_df(seq(0, 1, 1/(n_labels - 1)) + central_distance, text_coords) %>%
-    dplyr::bind_cols(text_data %>% dplyr::select(-r))
-
-
-  if(!is.null(reorder_axis)){
-    labels_data <- labels_data %>% dplyr::mutate(value = case_when(parameter %in% reorder_axis ~ -value,
-                                                                   TRUE ~ value))
-  }
-
-
-  rescaled_coords <- function(r, n_axis){
-    fi <- seq(0, 2*pi, (1/n_axis)*2*pi) + pi/2
-    tibble::tibble(r, fi) %>% dplyr::mutate(x = r*cos(fi), y = r*sin(fi)) %>% dplyr::select(-fi)
-  }
-
-  if(!is.null(ci_data)){
-    pdata_long_rescaled <- ci_data %>%
-      dplyr::select(group, parameter, y = min) %>%
-      mutate(measure = "min") %>%
-      bind_rows(ci_data %>%
-                   dplyr::select(group, parameter, y = max) %>%
-                   mutate(measure = "max")) %>%
-      bind_rows(p_data %>%
-                  tidyr::pivot_longer(-1, names_to = "parameter", values_to = "mean") %>%
-                  dplyr::select(group, parameter, y = mean) %>%
-                  mutate(measure = "mean")) %>%
-      group_by(parameter) %>%
-      dplyr::mutate(y = scales::rescale(y))
-
-    rescaled_min <- pdata_long_rescaled %>% filter(measure == "min") %>%
-      dplyr::select(-measure) %>%
-      pivot_wider(names_from = "parameter", values_from = "y") %>%
-      dplyr::mutate(copy = dplyr::pull(., 2)) %>% #da se moze geom_path spojiti opet na pocetnu tocku
-      tidyr::pivot_longer(-group, names_to = "parameter", values_to = "value") %>%
-      dplyr::group_by(group) %>%
-      dplyr::mutate(coords = rescaled_coords(value + central_distance, ncol(p_data) - 1)) %>%
-      tidyr::unnest(cols = c(coords)) %>%
-      dplyr::select(group, parameter, xmin = x, ymin = y)
-
-    rescaled_max <- pdata_long_rescaled %>% filter(measure == "max") %>%
-      dplyr::select(-measure) %>%
-      pivot_wider(names_from = "parameter", values_from = "y") %>%
-      dplyr::mutate(copy = dplyr::pull(., 2)) %>% #da se moze geom_path spojiti opet na pocetnu tocku
-      tidyr::pivot_longer(-group, names_to = "parameter", values_to = "value") %>%
-      dplyr::group_by(group) %>%
-      dplyr::mutate(coords = rescaled_coords(value + central_distance, ncol(p_data) - 1)) %>%
-      tidyr::unnest(cols = c(coords)) %>%
-      dplyr::select(group, parameter, xmax = x, ymax = y)
-
-    rescaled_ci <- rescaled_min %>% dplyr::left_join(rescaled_max, by = dplyr::join_by(group, parameter))
-
-    rescaled_ci_alt <- rescaled_min %>% rename(x = xmin, y = ymin) %>% dplyr::bind_rows(rescaled_max %>% rename(x = xmax, y = ymax))
-  }else{
-    pdata_long_rescaled <- p_data %>%
-                  tidyr::pivot_longer(-1, names_to = "parameter", values_to = "mean") %>%
-                  dplyr::select(group, parameter, y = mean) %>%
-                  mutate(measure = "mean") %>%
-      group_by(parameter) %>%
-      dplyr::mutate(y = scales::rescale(y))
-  }
-
-  rescaled_data <- pdata_long_rescaled %>% filter(measure == "mean") %>%
-    dplyr::select(-measure) %>%
-    pivot_wider(names_from = "parameter", values_from = "y") %>%
-    dplyr::mutate(copy = dplyr::pull(., 2)) %>% #da se moze geom_path spojiti opet na pocetnu tocku
-    tidyr::pivot_longer(-group, names_to = "parameter", values_to = "value") %>%
-    dplyr::group_by(group) %>%
-    dplyr::mutate(coords = rescaled_coords(value + central_distance, ncol(p_data) - 1)) %>%
-    tidyr::unnest(cols = c(coords))
-
-  rescaled_data <- if(is.null(subset) & zero_centered == FALSE){
-    rescaled_data
-  } else if(is.null(subset) & zero_centered == TRUE) {
-    rescaled_data %>% dplyr::filter(group != "zero_centered")
-  } else {
-      rescaled_data %>% dplyr::filter(group %in% subset)
-  }
-
-  step_1 +
-    {if(draw_axis == TRUE) ggplot2::geom_line(data = axis_coords(ncol(p_data) - 1), ggplot2::aes(x, y, group = id), alpha = 0.3)} +
-    {if(!is.null(ci_data)) ggplot2::geom_segment(data = rescaled_ci,
-                          ggplot2::aes(x = xmin, y = ymin, xend = xmax, yend = ymax, col = group, lwd = 1),
-                          alpha = 0.5, lineend = "square", show.legend = FALSE,
-                          arrow = arrow(ends = "both", angle = 90, length = unit(.1,"cm")))} +
-    scale_linewidth(range = c(0, 4)) +
-    ggplot2::geom_point(data = rescaled_data, ggplot2::aes(x, y, group = group, col = group), size = 2, stroke = 2) +
-    ggplot2::geom_path(data = rescaled_data, ggplot2::aes(x, y, group = group, col = group), size = 1) +
-    {if(area_fill == TRUE) ggplot2::geom_polygon(data = rescaled_data, ggplot2::aes(x, y, group = group, col = group, fill = group), size = 1, alpha = fill_opacity, show.legend = FALSE)} +
-    {if(scaled == TRUE){
-      ggplot2::geom_text(data = labels_data %>% dplyr::filter(parameter == labels_data$parameter[[1]]), ggplot2::aes(x, y, label = r), alpha = 0.65,
-                         family = theme_get()$text[["family"]],
-                         size = ifelse(is.null(axis_label_font_size), theme_get()$text[["size"]]/2.75, axis_label_font_size),
-                         fontface = ifelse(is.null(axis_label_font_face), "plain", axis_label_font_face))
-    }else{
-        ggplot2::geom_text(data = labels_data, ggplot2::aes(x, y, label = round(value, digit_rounding)), alpha = 0.65,
-                           family = theme_get()$text[["family"]],
-                           size = ifelse(is.null(axis_label_font_size), theme_get()$text[["size"]]/2.75, axis_label_font_size),
-                           fontface = ifelse(is.null(axis_label_font_face), "plain", axis_label_font_face))
-      }
-    } +
-    ggplot2::geom_text(data = text_coords(1 + central_distance + axis_name_offset), ggplot2::aes(x, y), label = labels_data$parameter[1:(ncol(p_data)-1)],
-                       family = theme_get()$text[["family"]],
-                       size = ifelse(is.null(axis_name_font_size), theme_get()$text[["size"]]/2.75, axis_name_font_size),
-                       fontface = ifelse(is.null(axis_name_font_face), "plain", axis_name_font_face)) +
-    ggplot2::labs(col = legend_title) +
-    ggplot2::theme(legend.position = "bottom",
-                   legend.text = ggplot2::element_text(size = 12),
-                   legend.title = ggplot2::element_text(size = 12))
-}

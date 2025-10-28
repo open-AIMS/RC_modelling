@@ -46,3 +46,9 @@ source("scripts/model_predictions.R")
 # ##################################
 
 source("scripts/model_checks.R")
+
+# ##################################
+# ############ 8. Extracting disturbance effects 
+# ##################################
+
+source("scripts/model_attributes.R")

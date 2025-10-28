@@ -9,7 +9,7 @@ dat_hcc <- dat_full %>%
   filter(fGROUP == "HCC") %>%
   arrange(REEF_NAME, SITE_NO, TRANSECT_NO, fYEAR)
 
-sample_years_with_condition <- function(years, min_n = 5, max_n = 30, max_gap = 5, max_tries = 100) {
+sample_years_with_condition <- function(years, min_n = 2, max_n = 15, max_gap = 5, max_tries = 100) {
   years <- sort(unique(years))
   n_years <- length(years)
   

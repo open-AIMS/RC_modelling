@@ -5,8 +5,6 @@
 rm(list=ls())
 setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
-rm(list=ls())
-
 # Load R package 
 source("../R/packages.R")
 source("../R/functions.R")

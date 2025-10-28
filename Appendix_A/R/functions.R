@@ -56,13 +56,33 @@ frk_prep <- function(data.grp.tier, HexPred_reefid2) {
 }
 
 make_dharma_res <- function(mod_) {
-  response <- mod_$data.grp.tier$COUNT
-  preds <- simulate(mod_$M, nsim = 1000) 
-  DHARMa::createDHARMa(
-    simulatedResponse = preds,
-    observedResponse = response,
+  
+  # Observed response
+  response_df <- mod_$data.grp.tier %>% 
+    group_by(fYEAR, Tier5) %>% 
+    summarize(COUNT = sum(COUNT), k = sum(TOTAL))  %>% 
+    mutate(fYEAR = as.factor(fYEAR), Tier5 = as.factor(Tier5))
+  observedResponse <- response_df$COUNT
+  
+  # Simulated response 
+  pred <- predict(mod_$M, type = c("mean"))
+  simulation_df <- as.data.frame(pred$MC$mu_samples) %>% 
+    mutate(fYEAR = as.factor(mod_$obj_frk$ST_BAUs@data$fYEAR)) %>%
+    mutate(Tier5 = as.factor(mod_$obj_frk$ST_BAUs@data$Tier5)) %>%
+    semi_join(response_df, by = c("fYEAR", "Tier5")) # filter data so that it only contains the (fYEAR, Tier5) combinations that are present in mean_obs.
+  simulation_df <- as.matrix(simulation_df[, 1:400]) 
+  # Flatten sampled probabilities, number of trials; simulate from binomial distribution; then reshape back to correct dimensions
+  probs <- as.vector(simulation_df)
+  trials <- rep(response_df$k, times = ncol(simulation_df))
+  sims <- rbinom(length(probs), size = trials, prob = probs)
+  simulatedResponse <- matrix(sims, nrow = nrow(simulation_df), ncol = ncol(simulation_df))
+  
+  res <- DHARMa::createDHARMa(
+    simulatedResponse = simulatedResponse,
+    observedResponse = observedResponse,
     integerResponse = TRUE
   )
+  return(res)
 }
 
 cov_extract <- function(model.out, obj_frk){
@@ -128,9 +148,9 @@ p <- ggplot(cond_table, aes(x = !!sym(var))) +
   theme_pubr() +
   scale_x_continuous(
     limits = c(0, max(range_vals)),
-    breaks = seq(0, max(range_vals), by = 4)
+    breaks = seq(0, max(range_vals), by = 5)
   ) +
-  ylim(0, 40)
+  ylim(0, 30)
 
 return(p)
 }
@@ -173,7 +193,7 @@ predict_newdata <- function(mod_M, new_BAU_data, hexpred, obj_frk, title_n){
     xlab("") +
     ylab("") +
     theme(
-      legend.position = "top",
+      legend.position = "none",
       legend.title = element_text(size = 12),
       legend.text = element_text(size = 10),
       strip.background = element_blank(),
@@ -290,8 +310,6 @@ pal_unc<- wes_palette("Zissou1", 100, type = "continuous")
     xlab("Longitude") +
     ylab("Latitude") +
     theme(
-     # axis.text = element_blank(),
-     # axis.ticks = element_blank(),
       legend.position = "top",
       legend.title = element_text(size = 12),
       legend.text = element_text(size = 10),
@@ -313,6 +331,116 @@ pal_unc<- wes_palette("Zissou1", 100, type = "continuous")
     labels = c("145.4","145.8", "146.2", "146.6"))
 
  return(list(p = p, p_unc = p_unc))
+}
+
+
+make_tier_plot <- function(tier_name, data) {
+  dat <- data %>% filter(Tier5 == tier_name)
+
+  ggplot() + 
+   geom_ribbon(data = dat, 
+                      aes(x=as.numeric(fYEAR),ymin=.lower*100, ymax=.upper*100, group=1),alpha=.3, fill ="#72b0d3") +
+   geom_point(data = dat, 
+                   aes(x = as.numeric(fYEAR), y = mean_cover), fill = "grey66", col = "black", size = 2.5, alpha = .6, shape = 20) + 
+ geom_line(data = dat, 
+                    aes(x=as.numeric(fYEAR), y=pred*100, group=1),size=.8) + 
+  ylab("Coral cover (%)") + xlab("Year") +  theme_pubr() +
+  theme(axis.text.x = element_text(size=10, angle = 45, hjust = 1),legend.position = "right",
+        axis.text.y = element_text(size=10),axis.title.y=element_text(size=12),
+        axis.title.x=element_text(size=12),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = 'white')) +
+    scale_y_continuous(
+      breaks = seq(0, 80, by = 40),
+      limits = c(0, 80)
+    )
+}
+
+process_contrasts <- function(cellmeans_wide) {
+  predictions_i <- cellmeans_wide |>
+    pivot_longer(cols = contains("20"), names_to = "year") |>
+    mutate(year = as.integer(year)) |>
+    arrange(year, draw) |>
+    group_by(draw) |>
+    mutate(diff = value / lag(value, n = 1),
+           diff_id = factor(paste0("diff_", seq_len(n())))) |>
+    ungroup()
+
+
+  max_iter <- nrow(cellmeans_wide)
+ 
+  plot_data <- predictions_i |>
+    drop_na() |>
+    mutate(cat_up = ifelse(diff > 1, 1, 0),
+           cat_down = ifelse(diff < 1, 1, 0)) |>
+    group_by(diff_id, year) |>
+    summarise(prob_up = sum(cat_up) / max_iter,
+              prob_down = sum(cat_down) / max_iter,
+              .groups = "drop")
+
+  fold_change <- predictions_i |>
+    drop_na() |>
+    group_by(year, diff_id) |>
+    summarise(fold_change = mean(diff), .groups = "drop") |>
+    left_join(plot_data, by = join_by(year, diff_id))
+
+  direction_arrow <- fold_change |>
+    group_by(year) |>
+    mutate(arrow = case_when(
+      fold_change > 1 & prob_up >= 0.9 ~ "Up",
+      fold_change < 1 & prob_down >= 0.9 ~ "Down",
+      TRUE ~ "Flat"
+    )) |>
+    dplyr::select(year, fold_change, prob_up, prob_down, arrow)
+
+  return(direction_arrow)
+}
+
+pick_arrow <- function(last_arrow) {
+  arrow_down <- image_read("../R/arrow-down.png")
+  arrow_up   <- image_read("../R/arrow-up.png")
+  arrow_flat <- image_read("../R/arrow-flat.png")
+  
+  # Select correct image
+  arrow_picked <- switch(last_arrow,
+    "Down" = arrow_down,
+    "Up"   = arrow_up,
+    "Flat" = arrow_flat,
+    stop("Unknown arrow type: must be 'Down', 'Up', or 'Flat'")
+  )
+  
+  return(arrow_picked)
+}
+
+make_zone_plot <- function(zone_name, data) {
+  dat <- data %>% filter(zone == zone_name)
+  
+  ggplot(dat, aes(x = fYEAR)) +
+    geom_ribbon(
+      aes(ymin = .lower*100, ymax = .upper*100, fill = zone),
+      alpha = 0.2
+    ) +
+    geom_line(
+      aes(y = cover_prop*100, color = zone),
+      linewidth = 1.1
+    ) +
+    xlab("Year") + 
+    ylab("Coral cover (%)") +
+    ylim(0, 50) +
+    ggtitle(zone_labels[[zone_name]]) +  # use title instead of facet
+    theme_pubr() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(size = 13),
+      axis.text.y = element_text(size = 13),
+      axis.title.x = element_text(size = 15),
+      axis.title.y = element_text(size = 15),
+      legend.position = "none",
+      plot.subtitle = element_text(size = 16)
+    ) +
+    scale_fill_manual(values = pal) +
+    scale_color_manual(values = pal)
 }
 
 ##################################

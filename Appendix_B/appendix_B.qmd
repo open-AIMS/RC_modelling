@@ -19,6 +19,9 @@ authors:
     affiliations:
       - ref: UOW
       - ref: KAUST
+  - name: Britta Schaffelke
+    affiliations:
+      - ref: aims
   - name: Kerrie Mengersen
     affiliations:
       - ref: qut
@@ -76,7 +79,8 @@ To be displayed on a big screen.
 
 
 rm(list=ls())
-setwd(paste0(here::here(), "/Appendix_B"))
+#setwd(paste0(here::here(), "/Appendix_B"))
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B")
 
 # Loading packages and functions
 source("R/packages.R")
@@ -89,7 +93,7 @@ title_of_run <- "High-resolution"
 ##### Create folders
 make_folders(title_of_run)
 ##### Generate settings
-generateSettings(nreefs = 25, nyears = 20)
+generateSettings(nreefs = 25, nyears = 15)
 sparse = FALSE # if different temporal sampling intensities is desired, otherwise annual surveys. 
 ##### Run the pipeline
 source("scripts/run_pipeline.R")
@@ -99,7 +103,7 @@ title_of_run <- "Medium-resolution"
 ##### Create folders
 make_folders(title_of_run)
 ##### Generate settings
-generateSettings(nreefs = 15, nyears = 10)
+generateSettings(nreefs = 15, nyears = 15)
 sparse = FALSE 
 ##### Run the pipeline
 source("scripts/run_pipeline.R")
@@ -109,7 +113,7 @@ title_of_run <- "Low-resolution"
 ##### Create folders
 make_folders(title_of_run)
 ##### Generate settings
-generateSettings(nreefs = 5, nyears = 5)
+generateSettings(nreefs = 5, nyears = 15)
 sparse = FALSE 
 ##### Run the pipeline
 source("scripts/run_pipeline.R")
@@ -119,7 +123,7 @@ title_of_run <- "Temporally-sparse"
 ##### Create folders
 make_folders(title_of_run)
 ##### Generate settings
-generateSettings(nreefs = 49, nyears = 30)
+generateSettings(nreefs = 49, nyears = 15)
 sparse = TRUE 
 ##### Run the pipeline
 source("scripts/run_pipeline.R")
@@ -187,9 +191,9 @@ We developed a modelling pipeline to test the predictive capaiblities of the spa
 #| cache: true
 
 table_data <- data.frame(
-  simulation = c("High-resolution", "Medium-resolution", "Low-resolution", "Temporally_sparse"),               
+  simulation = c("High-resolution", "Medium-resolution", "Low-resolution", "Temporally-sparse"),               
   reef_number = c("25", "15", "5", "50"),
-  year_number = c("20", "10", "5", "5-30")) 
+  year_number = c("15", "15", "15", "2-15")) 
 ```
 
 ```{r}
@@ -200,7 +204,7 @@ table_data <- data.frame(
 knitr::kable(table_data)
 ```
 
-Other settings were kept constant across the simulation scenarios. The coral baseline was generated using a west–east gradient of coral cover, consistent with patterns observed on the Great Barrier Reef. The relative influence of disturbances on coral dynamics was set to 60% for heat stress events, 39% for cyclones, and 1% for other factors. Coral growth was fixed at 30%, with a possible coverage range from 1% to 70%. The sampling design emulates the monitoring program of the Australian Institute of Marine Science, where data are collected within each reef from 2 sites, 5 transects per site, 100 photo frames per transect. Finally, point-based observations are generated to mimic the outputs of the machine learning system used in the ReefCloud platform (https://reefcloud.github.io/resources/ReefCloud_Overview.html), with 50 points per frame automatically classified.
+Other settings were kept constant across the simulation scenarios. The coral baseline was generated using a west–east gradient of coral cover, consistent with patterns observed on the Great Barrier Reef. The relative influence of disturbances on coral dynamics was set to 60% for heat stress events, 39% for cyclones, and 1% for other factors. Coral growth was fixed at 30%, with a possible coverage range from 1% to 70%. The sampling design emulates the monitoring program of the Australian Institute of Marine Science, where data are collected within each reef from 2 sites, 5 transects per site, 100 photo frames per transect. Finally, point-based observations are generated to mimic the outputs of the machine learning system used in the ReefCloud platform, with 50 points per frame automatically classified.
 
 The spatial domain is divided into a 0.1° tessellation grid, from which tier-level disturbance values are extracted and coral cover values are averaged for use in the spatio-temporal model. The predictive performances of the spatio-temporal for each scenario is tested using four predictive measures (see details below). These metrics are calculated using model predictions at predictive-tiers where true values are known.   
 
@@ -318,7 +322,7 @@ fig_pred_unc <- purrr::walk(
 )
 ```
 
-### Trends at selected locations
+### Trends at data-tiers
 
 ```{r, fig.width=15, fig.height=15}
 #| results: asis
@@ -328,10 +332,47 @@ fig_data <- purrr::walk(
   included_dirs, 
   ~ print_attr_plots_level3(
     list_folders = .x, 
-    name_plot = "trends_FRK", 
+    name_plot = "trends_data_FRK", 
     subtitle = FALSE, 
     plot_labels = TRUE, 
-    label = "Examples of temporal trends at A) four data-tiers and B) four predictive-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show true coral cover averaged at the tier level for the scenario",
+    label = "Examples of estimated coral trends at the data-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show observed coral cover averaged at the tier level, which were used as the response variable in the spatio-temporal model. for the scenario",
+    n_cols = 1
+  )
+)
+```
+### Trends at predictive-tiers
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_data <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "trends_nodata_FRK", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Examples of estimated coral trends at predictive-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals, for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Model attribution 
+
+```{r, fig.width=10, fig.height=10}
+#| results: asis
+#| panel: tabset
+
+fig_data <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "p_coefFRK", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Estimated effect sizes of disturbance exposure (in the logit scale). The points represent the estimated effect and the intervals represent the corresponding 95% confidence intervals, for the scenario",
     n_cols = 1
   )
 )
@@ -395,10 +436,10 @@ fig_dhw <- purrr::walk(
 
 These predictive measures give a single number with low scores representing better performances. 
 
-* 95% coverage interval (Cvg): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
+* 95% coverage interval (CvgErr): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
 
 $$
-\text{coverage95}(z, \ell, u) \;=\; 
+\text{CvgErr}(z, \ell, u) \;=\; 
 \left| 0.95 \;-\; \frac{1}{n} \sum_{i=1}^{n} \mathbf{1}\!\left( \ell_i < z_i < u_i \right) \right|
 $$
 

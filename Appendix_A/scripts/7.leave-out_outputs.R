@@ -4,9 +4,8 @@
 
 
 rm(list=ls())
-setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
-rm(list=ls())
+setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
 # Load R package 
 source("../R/packages.R")
@@ -25,10 +24,10 @@ indicators_table_tier <- mod_out %>%
   bind_cols()
 
 indicators_table_tier <- as_tibble(t(indicators_table_tier))
-colnames(indicators_table_tier) <- c("Test","Cvg", "IS", "RMSPE", "CRPS", "AIC")
+colnames(indicators_table_tier) <- c("Test","CvgErr", "IS", "RMSPE", "CRPS", "AIC")
 
 indicators_table_tier  <- indicators_table_tier %>%  
-                          mutate(across(c(Cvg, IS, RMSPE, CRPS), as.numeric)) %>%
+                          mutate(across(c(CvgErr, IS, RMSPE, CRPS), as.numeric)) %>%
                           data.frame() 
 
 # Viz model performances
@@ -43,10 +42,11 @@ colors <- c(
   "#E78C8C"
 )
 
-tab <- indicators_table_tier %>% dplyr::select(Test, RMSPE, `Cvg`, `CRPS`, `IS`)
+tab <- indicators_table_tier %>% dplyr::select(Test, RMSPE, `CvgErr`, `CRPS`, `IS`) %>%
+       data.frame()
 
 p_perf <- ggspider(tab, 
-         axis_name_offset = 0.15,
+         axis_name_offset = 0.20,
          background_color = "gray98", 
          fill_opacity = 0.15, 
          polygon = FALSE) +
@@ -61,7 +61,6 @@ p_perf <- ggspider(tab,
     legend.title = element_text(size = 2.5 * scale)
   ) +
   guides(colour = guide_legend(nrow = 2, byrow = TRUE))
-
 
 ggsave(plot = p_perf , width=5.5, height=6, file = "../figures/viz_pperf.png")
 

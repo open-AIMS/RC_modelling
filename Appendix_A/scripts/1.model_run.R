@@ -10,7 +10,7 @@ source("../R/packages.R")
 source("../R/functions.R")
 
 # Read the data
-data.grp.tier.ready <- read.csv("../data/reef_data.csv")
+data.grp.tier.ready <- read.csv("../data/reef_data_aggregated.csv")
 
 HexPred_reefid2 <- st_read("../data/hexpred.shp") |>
  rename(max_cyc_lag1 = mx_cy_1,
@@ -21,7 +21,7 @@ HexPred_reefid2 <- st_read("../data/hexpred.shp") |>
 # Model run 
 obj_frk <- frk_prep(data.grp.tier.ready, HexPred_reefid2) 
 
-# Fit FRK model 
+# Fit FRK model  (~ 3H)
 M <- FRK(f = COUNT ~ 1 + (1 | reefid) + max_cyc + max_cyc_lag1 + max_cyc_lag2 +
                    max_dhw + max_dhw_lag1 + max_dhw_lag2, 
          data = list(obj_frk$STObj), 

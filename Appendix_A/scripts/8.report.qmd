@@ -19,6 +19,9 @@ authors:
     affiliations:
       - ref: UOW
       - ref: KAUST
+  - name: Britta Schaffelke
+    affiliations:
+      - ref: aims
   - name: Kerrie Mengersen
     affiliations:
       - ref: qut
@@ -80,8 +83,10 @@ To be displayed on a big screen.
 #| eval: true
 #| cache: false
 
+setwd("C:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_A/scripts")
+
 rm(list=ls())
-setwd(paste0(here::here(), "/Appendix_A/scripts"))
+#setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
 # Load R package 
 source("../R/packages.R")
@@ -130,16 +135,22 @@ print_attr_plots(appendix_dir, "pred_new")
 #| fig-cap: Uncertainty associated with predictions across the Wet Tropics for each year between 2006-2024. Values correspond to the posterior credible intervals.
 print_attr_plots(appendix_dir, "pred_unc")
 ``` 
-
-#### Attribution of coral loss
-
+#### Trends with indicators 
 
 ```{r, fig.width=8, fig.height=6}
-#| label: fig-coef_
+#| label: fig-arrow_
 #| eval: true
 #| echo: false
-#| fig-cap: Effect sizes (in logit scale) of the model covariates. The points represent the estimated effect and the intervals represent the corresponding 95% confidence intervals. 
-print_attr_plots(appendix_dir, "coef_")
+#| fig-cap: Examples of estimated coral trends at data-tiers with indicators. The arrow shows the direction of coral cover over the last predicted years. The flat arrows indicate that the coral cover did not increase or decrease significantly.  
+print_attr_plots(appendix_dir, "trend_data_arrow")
+``` 
+
+```{r, fig.width=12, fig.height=10}
+#| label: fig-arrow_extra
+#| eval: true
+#| echo: false
+#| fig-cap: Estimated coral trends at multiple spatial scales with indicators. The left panels display trends using all-tiers at the regional scale (top) and a customized scale (bottom). The right panels dislay the trends for the data-tiers only. The arrow shows detection of coral cover changes with a downward arrow indicates at least a 90\% probability of decreasea and flat arrows indicating no detectable changes.  
+print_attr_plots(appendix_dir, "trends_extra")
 ``` 
 
 #### Model validation diagnostics 
@@ -175,14 +186,14 @@ Five validation tests are developed:
 * 2. rm(20% reef): 20% of reefs were randomly removed.
 * 3. rm(20% site): 20% of sites were randomly removed.
 * 4. rm(20% transect):  20% of transects were randomly removed.
-* 5. rm(5YRS): 5 years of observations were removed within each location (locations with less than 4 years of data were not used). 
+* 5. rm(3YRS): 3 years of observations were removed within each location (locations with less than 4 years of data were not used). 
 
 Four predictive measures are used: 
 
-* 95% coverage interval (Cvg): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
+* 95% coverage interval (CvgErr): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
 
 $$
-\text{coverage95}(z, \ell, u) \;=\; 
+\text{CvgErr}(z, \ell, u) \;=\; 
 \left| 0.95 \;-\; \frac{1}{n} \sum_{i=1}^{n} \mathbf{1}\!\left( \ell_i < z_i < u_i \right) \right|
 $$
 

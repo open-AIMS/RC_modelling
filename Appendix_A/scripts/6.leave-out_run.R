@@ -5,8 +5,6 @@
 rm(list=ls())
 setwd(paste0(here::here(), "/Appendix_A/scripts"))
 
-rm(list=ls())
-
 # Load R package 
 source("../R/packages.R")
 source("../R/functions.R")
@@ -23,7 +21,7 @@ HexPred_reefid2 <- mod_$HexPred_reefid2
 
 # Prepare the lists 
 
-test.validation <- c("1. rm(20% obs)", "2. rm(20% reef)", "3. rm(20% site)", "4. rm(20% transect)", "5. rm(5YRS)")
+test.validation <- c("1. rm(20% obs)", "2. rm(20% reef)", "3. rm(20% site)", "4. rm(20% transect)", "5. rm(3YRS)")
 
 # Make training and testing datasets for each validation test 
 
@@ -46,7 +44,7 @@ for (i in 1:length(test.validation)){
     train <-  X %>% filter(Transect %in% transect_pick)
     test <-  anti_join(X, train, by = 'id')  
   }else{
-    tal_transect <- X %>% group_by(Transect) %>% tally() %>% mutate(year_keep = n - 5) %>% filter(!year_keep < 1) %>% arrange(Transect)
+    tal_transect <- X %>% group_by(Transect) %>% tally() %>% mutate(year_keep = n - 3) %>% filter(!year_keep < 1) %>% arrange(Transect)
     
     train <- X %>% inner_join(tal_transect) %>%   arrange(Transect) %>%
       tidyr::nest(.by = Transect)  %>% 
@@ -97,7 +95,6 @@ test_mean <- test %>%
 test_mean$Tier5 <- as.character(test_mean$Tier5)
 test_mean$fYEAR <- as.numeric(as.character(test_mean$fYEAR))
   
-#test_pred <- inner_join(test_mean, post_dist_df, by = c("Tier5","fYEAR"))
   
 test_pred_sum <- post_dist_df %>% group_by(fYEAR,Tier5) %>% 
     ggdist::median_hdci(pred)%>%

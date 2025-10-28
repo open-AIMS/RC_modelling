@@ -71,32 +71,7 @@ if (length(unique(dhw.pts.effects.df$Year)) < 9) {
 g_spat_dhw <- ggplot(dhw.pts.effects.df, aes(y = Latitude, x = Longitude)) +
   geom_tile(aes(fill = Value)) +
   facet_wrap(~Year, ncol = ncols) +
-  scale_fill_gradientn("", colors = rev(heat.colors(10))) + 
-  coord_sf(crs = 4236) +
-    theme_pubr() +
-    theme(
-    axis.title = element_blank(),
-    legend.position = "top", 
-    legend.justification = c(0.5, 1),
-    legend.direction = "horizontal",
-    axis.text = element_blank()
-  )
-
-ggsave(filename = paste0(title_of_run,"/report/extra/dhw.png"),
-       plot = g_spat_dhw, width=14, height=6)
-
-write.csv(dhw.pts.effects.df, file = paste0(title_of_run,"/data/dhw.pts.df.csv"), row.names = F)
-
-# effects 
-dhw.effects <- synthos:::disturbance_dhw(spatial.grid,spde,config_sp)$dhw_effects
-
-######### CYC
-cyc.pts.effects <- synthos:::disturbance_cyc(spatial.grid,spde,config_sp)$cyc_pts_effects
-
-g_spat_cyc <- ggplot(cyc.pts.effects, aes(y = Latitude, x = Longitude)) +
-  geom_tile(aes(fill = Value)) +
-  facet_wrap(~Year, ncol = ncols) +
-  scale_fill_gradientn("", colors = terrain.colors(10)) + 
+  scale_fill_gradientn("Intensity", colors = rev(heat.colors(10))) + 
   coord_sf(crs = 4236) +
    theme_pubr() +
     theme(
@@ -104,11 +79,41 @@ g_spat_cyc <- ggplot(cyc.pts.effects, aes(y = Latitude, x = Longitude)) +
     legend.position = "top", 
     legend.justification = c(0.5, 1),
     legend.direction = "horizontal",
-    axis.text = element_blank()
+    legend.text = element_text(size = 14, angle = 90, hjust = 0.5),    
+    legend.title = element_text(size = 16),
+    strip.text = element_text(size = 14)  
+  )
+
+ggsave(filename = paste0(title_of_run,"/report/extra/dhw.png"),
+       plot = g_spat_dhw, width=15, height=15)
+
+write.csv(dhw.pts.effects.df, file = paste0(title_of_run,"/data/dhw.pts.df.csv"), row.names = F)
+
+# effects 
+dhw.effects <- synthos:::disturbance_dhw(spatial.grid,spde,config_sp)$dhw_effects
+
+######### CYC
+cyc.pts.effects <- synthos:::disturbance_cyc(spatial.grid,spde,config_sp)$cyc_pts_effects %>%
+ mutate(Year_plot = Year + 2010)
+
+g_spat_cyc <- ggplot(cyc.pts.effects, aes(y = Latitude, x = Longitude)) +
+  geom_tile(aes(fill = Value)) +
+  facet_wrap(~Year_plot, ncol = ncols) +
+  scale_fill_gradientn("Intensity", colors = terrain.colors(10)) + 
+  coord_sf(crs = 4236) +
+   theme_pubr() +
+    theme(
+    axis.title = element_blank(),
+    legend.position = "top", 
+    legend.justification = c(0.5, 1),
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 14, angle = 90, hjust = 0.5),    
+    legend.title = element_text(size = 16),
+    strip.text = element_text(size = 14)  
   )
 
 ggsave(filename = paste0(title_of_run,"/report/extra/cyclone.png"),
-       plot = g_spat_cyc, width=14, height=6)
+       plot = g_spat_cyc, width=15, height=15)
 
 write.csv(cyc.pts.effects, file = paste0(title_of_run,"/data/cyc.pts.df.csv"), row.names = F)
 
@@ -122,19 +127,21 @@ other.pts.effects <- synthos:::disturbance_other(spatial.grid,spde,config_sp)$ot
 g_spat_ot <- ggplot(other.pts.effects, aes(y = Latitude, x = Longitude)) +
   geom_tile(aes(fill = Value)) +
   facet_wrap(~Year, ncol = ncols) +
-  scale_fill_gradientn(colors = terrain.colors(10)) + 
+  scale_fill_gradientn("Intensity", colors = terrain.colors(10)) + 
   coord_sf(crs = 4236) +
-  theme_pubr() +
-  theme(
+   theme_pubr() +
+    theme(
     axis.title = element_blank(),
     legend.position = "top", 
     legend.justification = c(0.5, 1),
     legend.direction = "horizontal",
-    axis.text = element_blank()
+    legend.text = element_text(size = 14, angle = 90, hjust = 0.5),    
+    legend.title = element_text(size = 16),
+    strip.text = element_text(size = 14)  
   )
 
 ggsave(filename = paste0(title_of_run,"/report/extra/other_dist.png"),
-       plot = g_spat_ot, width=14, height=6)
+       plot = g_spat_ot, width=15, height=15)
 
 write.csv(other.pts.effects, file = paste0(title_of_run,"/data/other.pts.df.csv"), row.names = F)
 
