@@ -1,4 +1,4 @@
-Reproducible modelling framework
+Reproducible statistical modelling framework
 =========================================================================================
 
 <!-- badges: start -->
@@ -13,13 +13,13 @@ Reproducible modelling framework
 
 ## Content 
 
-This repository contains the results presented in the paper “Predicting coral trends and attributing drivers of change from local to global scales”
+This repository contains the results presented in the paper “Predicting coral trends and attributing drivers of change from local to global scales” by Vercelloni et al. 
 
 The files `Appendix_A.html` and `Appendix_B.html` correspond to the manuscript appendices. They can be reproduced following these simple instructions:
 
 In the `Appendix_A` folder, the code is stored in the `scripts/` directory. The scripts should be run in sequence. The final script, `8.report.qmd`, automatically generates the visualizations in HTML format (e.g., `quarto render 8.report.qmd`). Note that the folder `figures` needs to be manually created. 
 
-In the `Appendix_B` folder, the `appendix_B.qmd` file contains the code to run the modelling pipeline for the four scenarios described in the paper. Once the pipeline has finished running, this file can be rendered to automatically visualize the results (e.g., `quarto render appendix_B.qmd`).
+In the `Appendix_B` folder, the `appendix_B.qmd` file contains the code to run the statistical modelling pipeline for the four scenarios described in the paper. Once the pipeline has finished running, this file can be rendered to automatically visualize the results (e.g., `quarto render appendix_B.qmd`).
 
 ## Data tables 
 
