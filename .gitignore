@@ -3,12 +3,14 @@ pdfs/
 output/
 ignore/
 data_TRUE/
+figures_TRUE/
 old/
-High-resolution/
-Low-resolution/
-Medium-resolution/
+Long-term/
+Medium-term/
+Short-term/
 Temporally-sparse/
 figures_TRUE/
+Appendix_C_files/
 
 *.pdf
 *.zip
@@ -22,3 +24,4 @@ TODO.*md
 .Rproj.user
 .Rproj
 *.png
+*model_perf_all

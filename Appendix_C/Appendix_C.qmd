@@ -74,7 +74,9 @@ To be displayed on a big screen.
 
 This case study is designed to assess the model’s ability to predict coral cover at the local (tier) scale under varying spatial and temporal data resolutions. 
 
-The ReefCloud pipeline currently includes 11,820 public monitored reef locations across the world, but its temporal and spatial coverage is highly uneven (@tbl-rc). Temporally, 92.1\% of sites have only short-term data (1–5 years of monitoring), while medium-term (>5–15 years) and long-term (>15 years) monitoring account for just 6.6\% and 1.2\%, respectively. Spatially, monitoring is concentrated in Australia (37.1\% of locations), followed by the Pacific Ocean (32.2\% across 34 countries, excluding Australia) and the Indian Ocean (24.9\% across 36 countries). This disparity highlights both the dominance of short-term public datasets and the geographic concentration of monitoring efforts via ReefCloud.
+In May 2025, the ReefCloud pipeline included 11,820 public monitored reef locations across the world, but its temporal and spatial coverage is highly uneven (@tbl-rc). Temporally, 92.1\% of sites had short-term data (1–5 years of monitoring), while medium-term (>5–15 years) and long-term (>15 years) monitoring account for just 6.6\% and 1.2\%, respectively. Spatially, monitoring was concentrated in Australia (37.1\% of locations), followed by the Pacific Ocean (32.2\% across 34 countries, excluding Australia) and the Indian Ocean (24.9\% across 36 countries). 
+
+This disparity highlights both the dominance of short-term public datasets and the geographic concentration of monitoring efforts via ReefCloud.
 
 ```{r}
 #| include: true
@@ -84,7 +86,7 @@ The ReefCloud pipeline currently includes 11,820 public monitored reef locations
 
 rm(list=ls())
 #setwd(paste0(here::here(), "/Appendix_B"))
-setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B")
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_C")
 
 # Loading packages and functions
 source("R/packages.R")
