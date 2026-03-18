@@ -1,0 +1,625 @@
+---
+title: "Appendix C"
+subtitle: "USE CASE STUDY 3: SPATIO-TEMPORAL VARIABILITY IN DATA RESOLUTIONS"
+authors:
+  - name: Julie Vercelloni
+    corresponding: true
+    email: j.vercelloni@aims.gov.au
+    affiliations:
+      - ref: aims
+      - ref: qut
+  - name: Murray Logan
+    affiliations:
+      - ref: aims
+  - name: Andrew Zammit‐Mangion
+    affiliations:
+      - ref: UOW
+      - ref: KAUST
+  - name: Matthew Sainsbury‐Dale
+    affiliations:
+      - ref: UOW
+      - ref: KAUST
+  - name: Britta Schaffelke
+    affiliations:
+      - ref: aims
+  - name: Kerrie Mengersen
+    affiliations:
+      - ref: qut
+  - name: Manuel González‐Rivero
+    affiliations:
+      - ref: aims
+affiliations:
+  - id: aims
+    name: Australian Institute of Marine Science, Townsville, Australia
+  - id: qut
+    name: Centre for Data Science, Queensland University of Technology, Brisbane, Australia
+  - id: UOW
+    name: School of Mathematics and Applied Statistics, University of Wollongong, Wollongong, Australia
+  - id: KAUST
+    name: King Abdullah University of Science and Technology, Thuwal, Saudi Arabia
+engine: knitr
+format:
+  html:
+    toc: true
+    toc-location: left
+    title-block-banner: true
+    toc-depth: 3
+    highlight-style: atom-one
+    embed-resources: true
+    theme:
+      light: flatly
+      dark: darkly
+    code-overflow: wrap
+    code-fold: false
+    number-sections: true
+    number-depth: 2
+    shift-heading-level-by: -1
+    crossref:
+      lst-title: Code listing
+    fig-align: center
+    text-align: center
+    acm-html: default
+css: styles.css
+editor:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, chunkOpts, echo = FALSE}
+knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
+```
+::: {.callout-important}
+To be displayed on a big screen. 
+:::
+
+This case study is designed to assess the model’s ability to predict coral cover at the local (tier) scale under varying spatial and temporal data resolutions. 
+
+The ReefCloud pipeline currently includes 11,820 public monitored reef locations across the world, but its temporal and spatial coverage is highly uneven (@tbl-rc). Temporally, 92.1\% of sites have only short-term data (1–5 years of monitoring), while medium-term (>5–15 years) and long-term (>15 years) monitoring account for just 6.6\% and 1.2\%, respectively. Spatially, monitoring is concentrated in Australia (37.1\% of locations), followed by the Pacific Ocean (32.2\% across 34 countries, excluding Australia) and the Indian Ocean (24.9\% across 36 countries). This disparity highlights both the dominance of short-term public datasets and the geographic concentration of monitoring efforts via ReefCloud.
+
+```{r}
+#| include: true
+#| echo: false
+#| eval: true
+#| cache: false
+
+rm(list=ls())
+#setwd(paste0(here::here(), "/Appendix_B"))
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B")
+
+# Loading packages and functions
+source("R/packages.R")
+source("R/functions.R")
+
+rc_table <- tibble::tibble(
+  `Ocean Basin` = c(
+    "Atlantic Ocean",
+    "Australia",
+    "Indian Ocean",
+    "Pacific Ocean (excl. Australia)",
+    "Persian Gulf",
+    "Red Sea"
+  ),
+  `Site Overall (%)` = list(
+    c(percentage = 2.6, count = 306),
+    c(percentage = 37.2, count = 4392),
+    c(percentage = 24.9, count = 2945),
+    c(percentage = 32.2, count = 3801),
+    c(percentage = 0.5, count = 62),
+    c(percentage = 2.7, count = 314)
+  ),
+  `Nbre of countries` = c(12, 1, 36, 34, 5, 4),
+  `Nbre of programs` = c(24, 297, 255, 292, 11, 23),
+  `Short_term data (%)` = list(
+    c(percentage = 100, count = 306),
+    c(percentage = 85.2, count = 3744),
+    c(percentage = 95.6, count = 2817),
+    c(percentage = 95.9, count = 3647),
+    c(percentage = 100, count = 62),
+    c(percentage = 100, count = 314)
+  ),
+  `Medium_term data (%)` = list(
+    c(percentage = 0, count = 0),
+    c(percentage = 11.5, count = 507),
+    c(percentage = 4.2, count = 123),
+    c(percentage = 4.0, count = 152),
+    c(percentage = 0, count = 0),
+    c(percentage = 0, count = 0)
+  ),
+  `Long_term data (%)` = list(
+    c(percentage = 0, count = 0),
+    c(percentage = 3.2, count = 141),
+    c(percentage = 0.2, count = 5),
+    c(percentage = 0.05, count = 2),
+    c(percentage = 0, count = 0),
+    c(percentage = 0, count = 0)
+  )
+)
+
+rc_table_formatted <- rc_table %>%
+  mutate(
+    `Site Overall (%)` = sapply(`Site Overall (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
+    `Short_term data (%)` = sapply(`Short_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
+    `Medium_term data (%)` = sapply(`Medium_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
+    `Long_term data (%)` = sapply(`Long_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")"))
+  )
+
+```
+
+```{r}
+#| label: tbl-rc
+#| eval: true
+#| echo: false
+#| tbl-cap: Summary of public datasets available in the ReefCloud pipeline as of June 2025. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
+kableExtra::kbl(
+  rc_table_formatted,
+  align = c("l", "c", "c", "c", "c"),
+  format = "html"
+) %>%
+ kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover", "condensed"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE)    
+```
+
+We also used the simulation framework to investigate the robustness of the predictive model under controlled conditions, where simulated coral cover values are available everywhere across space. This strategy enables the evaluation of prediction accuracy at unobserved locations, in the absence of observational data for validation. It also facilitates a detailed assessment of uncertainty propagation through the spatial aggregation process at broader spatial scales.
+
+```{r}
+#| include: false
+#| echo: false
+#| eval: false
+
+############ Generate the scenarios 
+
+ ######## Simulation 1 ########
+title_of_run <- "Long-term"
+##### Create folders
+make_folders(title_of_run)
+##### Generate settings
+generateSettings(nreefs = 15, nyears = 20)
+sparse = FALSE # if different temporal sampling intensities is desired, otherwise annual surveys. 
+##### Run the pipeline
+source("scripts/run_pipeline.R")
+
+ ######## Simulation 2 ########
+title_of_run <- "Medium-term"
+##### Create folders
+make_folders(title_of_run)
+##### Generate settings
+generateSettings(nreefs = 15, nyears = 12)
+sparse = FALSE 
+##### Run the pipeline
+source("scripts/run_pipeline.R")
+
+ ######## Simulation 3 ########
+title_of_run <- "Short-term"
+##### Create folders
+make_folders(title_of_run)
+##### Generate settings
+generateSettings(nreefs = 15, nyears = 3)
+sparse = FALSE 
+##### Run the pipeline
+source("scripts/run_pipeline.R")
+
+ ######## Simulation 4 ########
+title_of_run <- "Temporally-sparse"
+##### Create folders
+make_folders(title_of_run)
+##### Generate settings
+generateSettings(nreefs = 49, nyears = 15)
+sparse = TRUE 
+##### Run the pipeline
+source("scripts/run_pipeline.R")
+
+############ Generate predictive performances across all simulations 
+source("scripts/model_perf_allsim.R")
+```
+
+```{r}
+#| include: true
+#| echo: false
+#| eval: true
+#| cache: false
+
+# Grep names and locations of simulations in the home folder
+all_dirs <- list.dirs(full.names = FALSE, recursive = FALSE)
+exclude_patterns <- c("R", "scripts", "old", "resources", ".git")
+included_dirs <- all_dirs[!sapply(all_dirs, function(dir) any(grepl(paste(exclude_patterns, collapse = "|"), dir)))] 
+included_dirs <- included_dirs[!grepl("^\\d", included_dirs)]
+included_dirs <- levels(factor(included_dirs, levels = c("Short-term", "Medium-term", "Long-term", "Temporally-sparse")))
+
+# Grep the models that ran for each simulations 
+file <- list.files(str_glue("{included_dirs}/model_outputs/full_run"),
+    full.names = TRUE
+  )
+
+# Extract second term and last term without .Rdata
+table_data <- data.frame(
+  simulation = map_chr(str_split(file, "/"), 1),               
+  model = str_remove(str_remove(file, "^.*/"), "\\.Rdata$")) %>%
+  dplyr::group_by(simulation) %>%
+  dplyr::summarize(
+    number_of_models = n(),                            
+    model_name = toString(unique(model))  
+  )
+
+# Assign figure path
+assign("FIGURES_PATH", "/report/extra/", envir = .GlobalEnv)
+```
+
+### Introduction to Synthos
+
+The R package synthos [GitHub](https://open-aims.github.io/synthos/index.html) generates synthetic data with the primarly aim to test new quantitative methods and multiple sampling designs, in a controlled enviroment. The data are created from spatio-temporal dependency structures mimicing realistic baselines, population dynamics, disturbance regimes and stochastic processes. 
+
+The generation of synthetic data is based on four main steps: 
+
+* Generation of the spatio-temporal domains: the first step consists to generate virtual coral reefs across a spatial domain.
+* Generation of the disturbances: two types of disturbance are generated (Heat Stress events, Cyclones) using a mechanistic approach that generates their own spatial and temporal patterns across the spatial domain.
+* Generation of baselines: representing values in coral cover the year prior the first sampling. 
+* Generation of sampling designs: selection of the number of reef monitoring locations and surveyed years.   
+
+Coral cover values are generated by combining baseline values, disturbance effects, and growth rates, and then projecting their cumulative effects across the spatial domain. The sampling design specifies the number of observations and years to be selected within a domain, creating the observed dataset. Models are then fitted to these observed data, and their predictive performance is evaluated at locations that are not monitored but for which true values are known. 
+
+### Simulation Scenarios 
+
+Three scenarios were tested, representing short-term, medium-term, long-term, and temporally sparse annual monitoring observations, each based on 15 permanent reefs (Table @tbl-scenario). This sample size corresponds to one-third of the total number of simulated reefs. A fourth scenario represents a sparse temporal resolution, in which 50 reefs are monitored over 15 years with varying survey intensities. Each reef is randomly surveyed between 2 and 15 times, with no more than 5 years between any two consecutive surveys. This scenario mimics the aggregation of different data sources with permanent and opportunistic observations. 
+
+```{r}
+#| include: true
+#| echo: false
+#| eval: true
+#| cache: true
+
+table_data <- data.frame(
+  `Scenario` = c("Short-term", "Medium-term", "Long-term", "Temporally-sparse"),               
+  `Nbre of reefs` = c("15", "15", "15", "15"),
+  `Nbre of years` = c("3", "12", "20", "2-15")) 
+```
+
+```{r}
+#| label: tbl-scenario
+#| eval: true
+#| echo: false
+#| tbl-cap: Details of the simulation scenarios. 
+kableExtra::kbl(
+  table_data,
+  caption = "",
+  align = c("l", "c", "c"),
+  format = "html"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) 
+```
+
+Other settings were kept constant across the simulation scenarios. The coral baseline was generated using a west–east gradient of coral cover. The relative influence of disturbances on coral dynamics was set to 60% for heat stress events and 40% for cyclones. Coral growth was fixed at 30%, with a possible coverage range from 1% to 70%. 
+
+The hierarchical sampling design within reef incorporated a nested structure of 1 depth (10m), 2 permanent sites, 5 transects per site, 100 photo frames per transect. Finally, point-based observations are generated with 50 points per frame. Coral cover values are summarized at the transect scale by summing the number of coral count across all photo frames.  
+
+The spatial domain is divided into a 0.1° grid (~10 × 10 km hexagonal units, referred to as 'tiers'). Disturbance values are projected onto these tiers, and transect-based coral cover values are aggregated within each tier (named data-tiers) for use in the spatio-temporal model. 
+
+### Predictive Performances 
+
+For each scenario, the model' predictive performance is tested based on four predictive measures (@tbl-metrics). These metrics are calculated based on the model predictions at predictive-tiers where true values are known but were not used by the statistical model. See @sec-metrics for the mathematical details of the predictive measures.   
+ 
+```{r}
+#| include: true
+#| echo: false
+#| eval: true
+#| cache: true
+
+metrics <- data.frame(
+  Name = c("Coverage Error (CvgErr)", "Root-Mean-Squared Prediction Error (RMSPE)", "95% Interval Score (IS)", "Continuous Ranked Probability Score (CRPS)"),
+  Details = c(
+    "The absolute difference between the proportion of times the 95% prediction intervals include the true values and 0.95.",
+    "Indicates how far predictions deviate from true observations, without accounting for uncertainty.",
+    "Balances accuracy and precision by rewarding intervals that include the true value and penalizing those that are too narrow or too wide.",
+    "Assesses the overall quality of the predictive distribution, penalizing inaccuracies, imprecision, and overconfidence."
+  )
+)
+```
+
+```{r}
+#| label: tbl-metrics
+#| eval: true
+#| echo: false
+#| tbl-cap: Details of predictive measures used to evaluate the predictive performances of the models in the simulation experiments. The metrics yield scores between 0 and 1, where values closer to 0 indicate a better predictive performance. 
+kableExtra::kbl(metrics, booktabs = TRUE, linesep = "") %>%
+  kableExtra::kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) %>%
+  kableExtra::column_spec(1, bold = TRUE, width = "4cm") %>%
+  kableExtra::column_spec(2, width = "10cm")
+```
+
+::: {.callout-tip}
+#### Results
+
+Validation diagnostics show that the temporally-sparse scenario (50 reefs sampled with varying temporal intensities) produces the best predictive performance for all metrics (@fig-sim). This result is mainly driven by the ability of the model to leverage repeated observations to characterise temporal dynamics while also accounting for spatial structure across the full prediction domain, and explicitly capture the influences of disturbances as they unfolded across space and time. The medium- and long-term scenarios exhibit similar predictive performances with reduced predictive performance based on the continuous ranked probability (CRPS) and root-mean-squared prediction error (RMSPE) and interval score (IS). This result reflects a higher model uncertainty associated with coral cover predictions at locations without observations (Figures 23 & 24). The short-term scenario clearly differs in terms of coverage error, with true values more frequently falling outside the prediction intervals, likely reflecting intervals that are too narrow (Figure 26).
+
+Each scenario achieved a satisfactory model fit, with $R^2$ values ranging from 0.88 for the long-term scenario to 0.99 for the temporally sparse scenario (@fig-fit). At the predictive domain level, the model reproduces the true simulated temporal patterns across scenarios, with some systematic underestimation evident in the long-term and temporally sparse scenarios (Figures 14–17). This is likely attributable to the more complex temporal dynamics resulting from an increased number of disturbances over extended simulation periods (Figures 39–46). TThe estimated effect sizes of disturbances indicate that uncertainty decreases from the short-term to the long-term scenario. This is primarily due to the greater and more variable disturbance exposure of reef locations across years, which allows the model to attribute their effects more accurately. The effect size of cyclone exposure in the temporally sparse scenario exhibits lower uncertainty compared to the long-term scenario, whereas the effect size for heat stress shows higher uncertainty.
+
+In summary, the simulation experiments demonstrate that the predictive model can accurately recover true simulated values and temporal patterns across varying spatio-temporal data resolutions. Long-term data are associated with greater overall uncertainty but allow for more precise attribution of disturbance effects. Short-term data, in contrast, may suffer from overestimation, characterized by narrow predictive intervals and higher uncertainty in disturbance attribution. Finally, temporally sparse data provide the best balance, yielding optimal predictive accuracy. 
+:::
+ 
+```{r, fig.width=12, fig.height=12}
+#| label: fig-sim
+#| eval: true
+#| echo: false
+#| fig-cap: Performance metrics for the four simulation scenarios.
+  
+print_attr_plots_level1(
+  list_folders = included_dirs,
+  name_plot = "model_perf_all"
+)
+``` 
+
+### Monitoring Locations 
+
+```{r, fig.width=10, fig.height=10}
+#| results: asis
+#| panel: tabset
+
+fig_synthos <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "synthos_reef_10K", 
+    subtitle = TRUE, 
+    plot_labels = TRUE, 
+    label = "Spatial distribution of the synthetic reefs. The red dots indicate monitoring locations and hexagons represent tier boundaries. A tier is considered a data-tier if it contains a red dot; otherwise, it is classified as a predictive-tier for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Benthic Monitoring Data
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_synthos <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "trend_data_fixed", 
+    subtitle = TRUE, 
+    plot_labels = TRUE, 
+    label = "Simulated transect-scale coral cover values (%) within each reef, with colours representing the two sites for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_synthos <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "tile_data_fixed", 
+    subtitle = TRUE, 
+    plot_labels = TRUE, 
+    label = "Temporal patterns of mean coral cover (%) by site within reef. White gaps show missing data for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Domain-level Trends 
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+ 
+fig_region <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "pred_broad", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Regional trend. The black line shows mean values and green shadows 95% predictive intervals. The dotted blue line is the true simulated temporal field estimated from the Gaussian Random Markov Field values in the simulation",
+    n_cols = 1
+  )
+)
+```
+
+### Model Prediction
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_pred <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "pred[A-Za-z0-9]+", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Predictions of coral cover (%) in",
+    n_cols = 1
+  )
+)
+```
+
+### Model Uncertainty
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+ 
+fig_pred_unc <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "pred_unc[A-Za-z0-9]+", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Uncertainty associated with predicted coral cover values in",
+    n_cols = 1
+  )
+)
+```
+
+### Trends at Local Scale
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_data <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "trends_data_FRK", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Examples of estimated coral trends at the data-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals. Dots show observed coral cover averaged at the tier level, which were used as the response variable in the spatio-temporal model. for the scenario",
+    n_cols = 1
+  )
+)
+```
+### Trends at predictive-tiers
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+
+fig_data <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "trends_nodata_FRK", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Examples of estimated coral trends at predictive-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals, for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Model attribution 
+
+```{r, fig.width=10, fig.height=10}
+#| results: asis
+#| panel: tabset
+
+fig_data <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "p_coefFRK", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Estimated effect sizes of disturbance exposure (in the logit scale). The points represent the estimated effect and the intervals represent the corresponding 95% predictive intervals, for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Model fit 
+
+```{r, fig.width=15, fig.height=15}
+#| label: fig-fit
+#| eval: true
+#| echo: false
+#| fig-cap: Model goodness-of-fit showing predicted coral cover versus true values for the prediction-tiers. True values corresponds to the mean coral cover at tier-level.   
+
+print_attr_plots_level2(
+  list_folders = included_dirs,
+  name_plot = "check_true.png"
+)
+``` 
+
+### Cyclone  
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+  
+fig_cyclone <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "cyclone", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Weighted effects of cyclone exposure per surveyed year for the scenario",
+    n_cols = 1
+  )
+)
+```
+
+### Heat stress 
+
+```{r, fig.width=15, fig.height=15}
+#| results: asis
+#| panel: tabset
+ 
+fig_dhw <- purrr::walk(
+  included_dirs, 
+  ~ print_attr_plots_level3(
+    list_folders = .x, 
+    name_plot = "dhw", 
+    subtitle = FALSE, 
+    plot_labels = TRUE, 
+    label = "Weighted effects of heat stress event per surveyed year for the scenario",
+    n_cols = 1
+  )
+)
+
+``` 
+
+### Details on predictive measures {#sec-metrics}
+
+These predictive measures give a single number with low scores representing better performances. 
+
+* 95% Coverage Error (CvgErr): The absolute difference between the proportion of times the 95% prediction intervals include the true values and 0.95. It is estimated as follows: 
+
+$$
+\text{CvgErr}(z, \ell, u) \;=\; 
+\left| 0.95 \;-\; \frac{1}{n} \sum_{i=1}^{n} \mathbf{1}\!\left( \ell_i < z_i < u_i \right) \right|
+$$
+
+where $z = \{z_1, z_2, \dots, z_n\}$ are the coral cover observations, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $\mathbf{1}(\cdot)$ is the indicator function (1 if the condition is true, 0 otherwise).
+
+* Root-Mean-Squared Prediction Error (RMSPE): Indicates how far predictions deviate from true observations, without accounting for uncertainty.
+
+$$
+\text{RMSPE} \;=\; \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 }
+$$
+
+where $y$ and $\hat{y}$ are the observed and predicted coral cover values, respectively, and $n$ the total number of observations. 
+
+
+* 95% Interval Score (IS): Balances accuracy and precision by rewarding intervals that include the true value and penalizing those that are too narrow or too wide. It is computed as follow: 
+
+$$
+\text{IS}_{95} \;=\; \frac{1}{n} \sum_{i=1}^{n} 
+\Bigg[
+(u_i - \ell_i)
++ \frac{2}{\alpha} (\ell_i - y_i)\,\mathbf{1}(y_i < \ell_i)
++ \frac{2}{\alpha} (y_i - u_i)\,\mathbf{1}(y_i > u_i)
+\Bigg]
+$$
+
+where $\alpha = 0.05$, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $y$ are observed coral cover. 
+
+* Continuous Ranked Probability Score (CRPS): Assesses the overall quality of the predictive distribution, penalizing inaccuracies, imprecision, and overconfidence.  
+
+$$
+\text{CRPS}(F, y) \;=\; \sigma \left[ 
+z \left( 2 \Phi(z) - 1 \right) \;+\; 2 \,\phi(z) \;-\; \frac{1}{\sqrt{\pi}}
+\right],
+\quad z = \frac{y - \mu}{\sigma}
+$$
+
+where $y$ is the observed coral cover values, $\mu$ and $\sigma$ are the mean and the standard deviation of the predictive normal distribution, $\phi(.)$ represented the standard normal probability density function and $\Phi$ the cumulative distribution function. 
