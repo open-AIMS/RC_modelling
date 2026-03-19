@@ -349,10 +349,10 @@ dist_WetTropic <- plots_dhw[[1]] +  plots_cyc[[1]] +
   title = "Wet Tropics"
 )
 
-dist_Burkedin <- plots_dhw[[2]] +  plots_cyc[[2]] + 
+dist_Burdekin <- plots_dhw[[2]] +  plots_cyc[[2]] + 
    plot_layout(ncol = 2, axis_titles = "collect") +  
    plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Burkedin"
+  title = "Burdekin"
 )
 
 dist_Mackay <- plots_dhw[[3]] +  plots_cyc[[3]] + 
@@ -540,7 +540,7 @@ ggsave(p1, filename = "../figures/GBR_region.png", width = 8, height = 8)
 ```
 ### The Central Great Barrier Reef {.unnumbered}
 
-The Australian Great Barrier Reef is divided into six Natural Resource Management (NRM) regions, each managed by a different regional organization. In this case study, we focused on the NRM regions located in the central section of the GBR (15.4–20.7° S), comprising three NRM regions (@fig-map-1). Two of these regions, Wet Tropics and Burkedin are full included in this section, along with 58.3% of the Mackay Whitsunday region. The Central GBR reef area is estimated at 5282 km² with 4% of the tiers containing data.    
+The Australian Great Barrier Reef (GBR) is divided into six marine ecoregions (also named Natural Resource Management (NRM) regions here), each managed by a different regional organization. In this case study, we focused on the NRM regions located in the central section of the GBR (15.4–20.7° S), comprising three NRM regions (@fig-map-1). Two of these regions, Wet Tropics and Burdekin are full included in this section, along with 58.3% of the Mackay Whitsunday region. The Central GBR reef area is estimated at 5283 km² with 4% of the tiers containing data.    
 
 Coral cover observations were extracted from the database on 30 July 2025. A total of 1728 transects from 358 coral reefs collected between 2006 and 2024, across five monitoring programs. 
 
@@ -588,9 +588,9 @@ plots_hov[[1]]
 dist_WetTropic
 ```
 
-#### Burkedin
+#### Burdekin
 
-Burkedin reef area is estimated at 1507 km² with 4.2% of the tiers containing data from 178 coral reefs and 496 transects. The temporal resolutions of data collected in this NRM region were similar to the Wet Tropics (@tbl-2). At the data-tier level, coral cover varied from 1.1% to 80.3% with an average coral cover estimated at 20.9% between 2007-2024 (@fig-data-2).  
+Burdekin reef area is estimated at 1507 km² with 4.2% of the tiers containing data from 178 coral reefs and 496 transects. The temporal resolutions of data collected in this NRM region were similar to the Wet Tropics (@tbl-2). At the data-tier level, coral cover varied from 1.1% to 80.3% with an average coral cover estimated at 20.9% between 2007-2024 (@fig-data-2).  
 
 We detected seven years with non-zero DHW values and nine years with detected exposure to cyclonic waves (@fig-dist-2), exceeding the number of potential disturbance events observed in the Wet Tropics. Mean DHW values recorded at the data-tier tended to be higher than regional means in 2017, 2020, 2022 and 2024. In contrast, cyclone exposure showed the opposite pattern, with mean values generally lower at the data-tier than across all tiers.
 
@@ -598,8 +598,8 @@ We detected seven years with non-zero DHW values and nine years with detected ex
 #| label: tbl-2
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in Burkedin. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_Burkedin")  
+#| tbl-cap: Summary of public datasets available in Burdekin. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
+print_attr_plots(appendix_dir, "summary_table_Burdekin")  
   
 ```
 
@@ -608,7 +608,7 @@ print_attr_plots(appendix_dir, "summary_table_Burkedin")
 #| echo: false
 #| eval: true
 #| label: fig-data-2
-#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in Burkedin (2007–2024). White gaps represent missing data.  
+#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in Burdekin (2007–2024). White gaps represent missing data.  
 plots_hov[[2]]
 ```
 
@@ -618,7 +618,7 @@ plots_hov[[2]]
 #| eval: true
 #| label: fig-dist-2
 #| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2006 and 2024 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
-dist_Burkedin
+dist_Burdekin
 ```
 
 #### Mackay Whitsunday 
@@ -1212,7 +1212,7 @@ combined_plot_WetTropics <- p_dhw_low[[1]] +  p_dhw_high[[1]] + guide_area() +
   title = "Wet Tropics"
 )
 
-# Burkedin
+# Burdekin
 mod <- mod_[[2]]
 
 mod_M <- mod$M
@@ -1232,9 +1232,9 @@ pred <- predict_year(mod_M, olddata, hexpred, obj_frk, title_n = "", max_cover =
 p_pred_B <- pred$p
 p_unc_B <- pred$p_unc
 
-ggsave(p_pred_B, filename = "../figures/Predictions_Burkedin.png",
+ggsave(p_pred_B, filename = "../figures/Predictions_Burdekin.png",
          width=12, height=14)
-ggsave(p_unc_B, filename = "../figures/Predictions_UNC_Burkedin.png",
+ggsave(p_unc_B, filename = "../figures/Predictions_UNC_Burdekin.png",
          width=12, height=14)
 
 # Low
@@ -1248,7 +1248,7 @@ new_BAU_data <- olddata %>%
 
 p_cycl1_low <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "0 hours", max_cover = 55)
 
-ggsave(p_cycl1_low[[1]], filename = "../figures/Low_CycL_Burkedin.png",
+ggsave(p_cycl1_low[[1]], filename = "../figures/Low_CycL_Burdekin.png",
          width=7, height=6)
 
 # High
@@ -1262,11 +1262,11 @@ new_BAU_data <- olddata %>%
 
 p_cycl1_high <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "30 hours", max_cover = 55)
 
-ggsave(p_cycl1_high[[1]], filename = "../figures/High_CycL_Burkedin.png",
+ggsave(p_cycl1_high[[1]], filename = "../figures/High_CycL_Burdekin.png",
          width=7, height=6)
 
 
-combined_plot_Burkedin <- p_cycl1_low[[1]] + p_cycl1_high[[1]] + guide_area() +
+combined_plot_Burdekin <- p_cycl1_low[[1]] + p_cycl1_high[[1]] + guide_area() +
   plot_layout(
     nrow = 2,
     guides = "collect",
@@ -1276,7 +1276,7 @@ combined_plot_Burkedin <- p_cycl1_low[[1]] + p_cycl1_high[[1]] + guide_area() +
   plot_annotation(
     tag_levels = "a",
     tag_suffix = ')',
-    title = "Burkedin"
+    title = "Burdekin"
   )
 
 
@@ -1355,13 +1355,13 @@ p_WT <- plot_diff(pred_high, pred_low, title_n = "Wet Tropics")
 ggsave(p_WT, filename = "../figures/WetTropics_diff.png",
          width=7, height=6)
 
-# Burkedin
+# Burdekin
 
 pred_low <- p_cycl1_low[[2]]
 pred_high <- p_cycl1_high[[2]]
 
-p_B <- plot_diff(pred_high, pred_low, title_n = "Burkedin")
- ggsave(p_B, filename = "../figures/Burkedin_diff.png",
+p_B <- plot_diff(pred_high, pred_low, title_n = "Burdekin")
+ ggsave(p_B, filename = "../figures/Burdekin_diff.png",
          width=7, height=6)
 
 #Mackay
@@ -1399,7 +1399,7 @@ p_pred_WT
 p_unc_WT 
 ```
 
-#### Burkedin
+#### Burdekin
 
 In Burdekin, a clear north–south gradient in coral cover was observed from 2007 to 2014, with higher values in the southern part of the region (@fig-pred-2). Regional recovery occurred through 2015 and 2018, followed by a broad decline in 2019 potentially influenced by the 2018 cyclone and recovery in 2020. Then patchy declines in coral cover were predicted across the region up to 2024. Uncertainty remained high in the southern sector throughout most years, decreasing by 2024 (@fig-pred-unc-2).
 
@@ -1408,7 +1408,7 @@ In Burdekin, a clear north–south gradient in coral cover was observed from 200
 #| echo: false
 #| eval: true
 #| label: fig-pred-2
-#| fig-cap:  Predicted coral cover values across Burkedin for each year between 2007-2024. Values correspond to the posterior means.   
+#| fig-cap:  Predicted coral cover values across Burdekin for each year between 2007-2024. Values correspond to the posterior means.   
 p_pred_B
 ```
 
@@ -1417,7 +1417,7 @@ p_pred_B
 #| echo: false
 #| eval: true
 #| label: fig-pred-unc-2
-#| fig-cap:  Uncertainty associated with predictions across Burkedin for each year between 2007-2024. Values correspond to the posterior credible intervals.   
+#| fig-cap:  Uncertainty associated with predictions across Burdekin for each year between 2007-2024. Values correspond to the posterior credible intervals.   
 p_unc_B 
 ```
 
@@ -1449,7 +1449,7 @@ p_unc_M
 
 In the Wet Tropics, cyclone exposure at lag0 and lag1, as well as heat stress across all time lags showed significant negative regional effects, with 95% prediction intervals not overlapping zero. The largest absolute decline between the minimum and maximum observed disturbance levels was associated with cyclone exposure at lag1, corresponding to a 37.6% reduction in coral cover (95% prediction interval: −41.0% to −3.1%, @fig-cond-all-1). Heat stress was associated with a 18.3% decline (95% prediction interval: −23.3% to −11.5%), with the magnitude of decline decreasing with increasing lag: 15.1% at lag 1 (−20.7% to −7.0%) and 7.4% at lag 2 (−11.6% to −0.5%).
 
-Spatially, increasing magnitude of DHW alone (i.e., excluding other disturbances and time-lag effects) contributed to regional declines in coral cover (@combined_plot_WetTropics), with absolute losses estimated to range from 3.5% to 10.9%, and a regional average decline of 7.0% (@fig-cond-space-change-1).  
+Spatially, increasing magnitude of DHW alone (i.e., excluding other disturbances and time-lag effects) contributed to regional declines in coral cover (@fig-cond-space-1), with absolute losses estimated to range from 3.5% to 10.9%, and a regional average decline of 7.0% (@fig-cond-space-change-1).  
 
 ```{r, fig.width=10, fig.height=6}
 #| include: true
@@ -1478,9 +1478,9 @@ combined_plot_WetTropics
 p_WT
 ```
 
-#### Burkedin
+#### Burdekin
 
-In the Burkedin region, a significant negative effect was detected only for cyclone exposure at lag 1. This disturbance was associated with a large regional decline, with coral cover predicted to decrease by 42.6% between the minimum and maximum observed cyclone exposure values (95% prediction interval: −43.3% to −33.3%, @fig-cond-all-2).
+In the Burdekin region, a significant negative effect was detected only for cyclone exposure at lag 1. This disturbance was associated with a large regional decline, with coral cover predicted to decrease by 42.6% between the minimum and maximum observed cyclone exposure values (95% prediction interval: −43.3% to −33.3%, @fig-cond-all-2).
 
 Increasing exposure to cyclonic waves from 0 to 30 hours (@fig-cond-space-2) was associated with varying degrees of coral cover decline across the region, ranging from 3.2% to 24.3%, with an average decline of 13.6%. Most regional estimates (75% percentile) fell between 11.9% and 24.3%, indicating that the majority of areas experienced moderate to large declines (@fig-cond-space-change-2).  
 
@@ -1489,7 +1489,7 @@ Increasing exposure to cyclonic waves from 0 to 30 hours (@fig-cond-space-2) was
 #| echo: false
 #| eval: true
 #| label: fig-cond-all-2
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Burkedin. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
+#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Burdekin. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
 all_plots_2
 ```
 
@@ -1499,8 +1499,8 @@ all_plots_2
 #| echo: false
 #| eval: true
 #| label: fig-cond-space-2
-#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of cyclone exposure at lag1 across Burkedin. 
-combined_plot_Burkedin
+#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of cyclone exposure at lag1 across Burdekin. 
+combined_plot_Burdekin
 ```
 
 ```{r, fig.width=6, fig.height=5}
@@ -1508,7 +1508,7 @@ combined_plot_Burkedin
 #| echo: false
 #| eval: true
 #| label: fig-cond-space-change-2
-#| fig-cap: Associated relative changes of coral cover between low and high levels of cyclone exposure at lag1 across Burkedin.
+#| fig-cap: Associated relative changes of coral cover between low and high levels of cyclone exposure at lag1 across Burdekin.
 p_B
 ```
 
@@ -1516,7 +1516,7 @@ p_B
 
 In the Mackay Whitsunday region, cyclone exposure showed significant negative regional effects across all time lags, while heat stress was significant only at lag 1. The largest absolute decline between the minimum and maximum observed cyclone exposure levels was estimated at 43.8% at lag 0 (95% prediction interval: −40.1% to −37.6%), followed by 42.1% at lag 2 (−39.3% to −29.0%) and 35.1% at lag 1 (−36.9% to −16.3%, @fig-cond-all-3). Heat stress at lag 1 was associated with a smaller decline of 11.0%, although with substantial uncertainty (95% prediction interval: −18.9% to -1.5%).
 
-Comparing predictions under no cyclonic wave exposure at lag 1 with those under high exposure across space (@combined_plot_Mackay) revealed stronger declines in the northern section of the region (@fig-cond-space-change-3), with coral cover losses reaching up to 19.9% and a regional average decline of 11.2%.  
+Comparing predictions under no cyclonic wave exposure at lag 1 with those under high exposure across space (@fig-cond-space-3) revealed stronger declines in the northern section of the region (@fig-cond-space-change-3), with coral cover losses reaching up to 19.9% and a regional average decline of 11.2%.  
 
 ```{r, fig.width=10, fig.height=6}
 #| include: true
@@ -1546,7 +1546,7 @@ p_MW
 
 ### Model validation {.unnumbered}
 
-#### Model fit {.unnumbered}
+Model performance shows a strong agreement between predicted and observed coral cover at the data-tier level, with an $R^2$ scores ranging from 79\% for Burdekin up to 89\% for the Wet Tropics (@r-squared) with normally distributed residuals and absences of overdispersions (@mod-res). 
 
 ```{r}
 #| include: false
@@ -1571,8 +1571,6 @@ ggsave(combined_plot_fit, filename = "../figures/models_fit.png",
 #| fig-cap:  Model goodness-of-fit for the three regions. Coral cover observations at the tier-level were used to fit the spatio-temporal models. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line.    
 combined_plot_fit
 ``` 
-
-#### Model residuals {.unnumbered}
 
 ```{r}
 #| include: false
@@ -1604,7 +1602,7 @@ res_all
 ``` 
 
 #### Leave-out-data analysis {.unnumbered}
-This analysis was performed on the Wet Tropics region only. 
+This analysis was performed on the Wet Tropics region only.  
 
 The leave-out data approach is used to evaluate the influence of specific observations using prediction-performance measures. The full model is fitted on a train dataset composed of a random sample of observations and prediction-performance measures are computed on the leave-out observations.   
 
@@ -1663,6 +1661,8 @@ where $y$ is the observed coral cover values, $\mu$ and $\sigma$ are the mean an
 
 These predictive measures give a single number with low scores representing better performances. 
 
+Results from this analysis indicate that the model predictive performance declines when entire blocks of observations, such as specific reefs and sites, are removed (@fig-p_perf). 
+
 ```{r, fig.width=5.5, fig.height=6}
 #| include: true
 #| echo: false
@@ -1680,7 +1680,7 @@ The aim of this analysis is to explore the influence of the basis function formu
 * 3: three temporal basis functions randomly selected from the FRK auto basis function. 
 * 1: one temporal basis function randomly selected from the FRK auto basis function. 
 
-We found that the estimation of regional trends (@fig-bf-region) is more strongly influenced by the number of temporal basis functions, whereas the attribution of coral loss (@fig-bf-dist) is less affected.
+As anticipated, the number of temporal basis functions in the model affects the smoothness of coral trends at the tier level, which subsequently impacts the uncertainty in regional trends (@fig-bf-region). The number of basis functions also influence the pattern of attribution of disturbance effects that is inferred when fitting the model (@fig-bf-dist). 
 
 
 ```{r, fig.width=6, fig.height=5}

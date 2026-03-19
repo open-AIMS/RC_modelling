@@ -1,4 +1,4 @@
-Reproducible statistical modelling framework
+Reproducible study results
 =========================================================================================
 
 <!-- badges: start -->
@@ -13,25 +13,26 @@ Reproducible statistical modelling framework
 
 ## Content 
 
-This repository contains the results presented in the paper “Predicting coral trends and attributing drivers of change from local to global scales” by Vercelloni et al. 
+This repository contains the results presented in the paper “Predicting coral trends and attributing drivers of change from local to broad spatial scales” by Vercelloni et al. 
 
-The files `Appendix_A.html` and `Appendix_B.html` correspond to the manuscript appendices. They can be reproduced following these simple instructions:
+The files `Appendix_A.html` and `Appendix_B.html` correspond to the manuscript appendices. They can be reproduced by rendering the quarto documents located in the `scripts/` directories. 
 
-In the `Appendix_A` folder, the code is stored in the `scripts/` directory. The scripts should be run in sequence. The final script, `8.report.qmd`, automatically generates the visualizations in HTML format (e.g., `quarto render 8.report.qmd`). Note that the folder `figures` needs to be manually created. 
-
-In the `Appendix_B` folder, the `appendix_B.qmd` file contains the code to run the statistical modelling pipeline for the four scenarios described in the paper. Once the pipeline has finished running, this file can be rendered to automatically visualize the results (e.g., `quarto render appendix_B.qmd`).
+`Appendix_C.html` can be also reproduced by rendering the quarto document located in `Appendix_C` folder. 
 
 ## Data tables 
 
-Monitoring and disturbance data are provided in the `Appendix_A/data` folder, which contains three files:
+Monitoring and disturbance data are provided in the `Appendix_A/data` and `Appendix_B/data` folder, which contains these files:
 
-- reef_data_aggregated.csv: observations of coral cover at data-tier locations. The table contains eight variables - `Tier5` (data-tier identifier), `fYEAR` (survey year), `COUNT` (count of coral cover), `TOTAL` (total point count), `n_obs` (number of monitored sites within the data-tier), `COVER` (percent coral cover), and geolocation coordinates of each data-tier. 
-- hexpred.shp: a shapefile containing disturbance information across all tiers. The table contains 18 variables with `Tier5` (all-tier identifier), `fYEAR` (survey year), `svrty_d*` (severity of heat stress and associated time lags), `max_dhw*` (maximum values of degree heating weeks for the survey year and associated time lags), `svrty_c*` (severity of cyclone exposure and associated time lags), `max_cyc*` (maximum cyclone exposure for the survey year expressed as hours of exposure to cyclonic waves and associated time lags), `As_Data` (yes if `Tier5` is a data-tier, no is `Tier5` is a predictive-tier), `reefid` (reef(s) identifier within the `Tier5`), `reef_ar` (portion of the `Tier5` that contains coral reefs in square metres), `geometry` (geolocation of the `Tier5`).  
-- MarineWaterBodiesV2_4: a shapefile indicating inshore and offshore reef zones along the Great Barrier Reef.
+- reef_data_aggregated.csv: observations of coral cover at data-tier locations. The table contains eight variables - `Tier4` (marine ecoregion id),`Tier5` (data-tier identifier), `fYEAR` (survey year), `COUNT` (count of coral cover), `TOTAL` (total point count), `LONGITUDE` (associated with Tier5 centroid), `LATITUDE` (associated with Tier5 centroid). 
+- covariates_full_tier5.RData: a shapefile containing disturbance information across all tiers. The table contains 22 variables with `Tier5` (all-tier identifier), `year`, `severity_dhw*` (severity of heat stress and associated time lags), `max_dhw*` (maximum values of degree heating weeks for the survey year and associated time lags), `severity_c*` (severity of cyclone exposure and associated time lags), `max_cyc*` (maximum cyclone exposure for the survey year expressed as hours of exposure to cyclonic waves and associated time lags).  
+- tier5.sf.RData: a shapefile indicating Tier5 locations.
+- tiers.lookup.RData: a lookup table linking Tier5 with Tier4 levels. 
+- reef_layer.sf: a shapefile of the Tropical Coral Reefs of the World 
 
 To cite the data, please use:
-Australian Institute of Marine Science (AIMS). (2025). ReefCloud public data (Australia, 2006–2024). Retrieved from https://apps.aims.gov.au/metadata/view/1997de64-b274-427f-8cdc-d01b54e623f9
+- `Appendix_A`: Australian Institute of Marine Science (AIMS). (2025). ReefCloud public data (Australia, 2006–2024). Retrieved from https://apps.aims.gov.au/metadata/view/1997de64-b274-427f-8cdc-d01b54e623f9
  (accessed 01-Dec-2025).
+- `Appendix_B`: National Oceanographic and Atmospheric Association (NOAA). U.S. Pacific Islands National Coral Reef Monitoring Program (NCRMP). Retrived from https://www.fisheries.noaa.gov/inport/item/25274 (accessed 01-Dec-2025).
 
 ## License
 
