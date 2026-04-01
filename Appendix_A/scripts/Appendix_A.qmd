@@ -1,6 +1,6 @@
 ---
 title: "Appendix A"
-subtitle: "USE CASE STUDY 1: TEMPORAL VARIABILITY IN DATA RESOLUTIONS"
+subtitle: "USE CASE STUDY: CENTRAL GREAT BARRIER REEF"
 authors:
   - name: Julie Vercelloni
     corresponding: true
@@ -360,6 +360,44 @@ dist_Mackay <- plots_dhw[[3]] +  plots_cyc[[3]] +
    plot_annotation(tag_levels = "a", tag_suffix = ')', 
   title = "Mackay Whitsunday"
 )
+
+# mod <- mod_[[1]]
+#   dat_coral <- mod$data.grp.tier
+#   hexpred   <- mod$HexPred_reefid2
+  
+#   full_cov_plots <- hexpred %>%
+#     inner_join(
+#       tiers.lookup %>% dplyr::select(-reef_area, -tier_id),
+#       by = "Tier5"
+#     ) 
+# var = "max_dhw" 
+
+# # All tiers
+# sf_use_s2(FALSE) 
+# dat_all <- summarise_disturbance(full_cov_plots, var, "all-tier")
+  
+#   # Data tiers only
+# dat_tier_year <- dat_coral %>%
+#     mutate(tier_year = paste(Tier5, fYEAR, sep = "_")) %>%
+#     pull(tier_year)
+  
+# dat_data <- full_cov_plots %>%
+#     mutate(tier_year = paste(Tier5, fYEAR, sep = "_")) %>%
+#     filter(tier_year %in% dat_tier_year) %>%
+#     summarise_disturbance(var, "data-tier")
+
+# dat_values_all <- full_cov_plots %>%
+#   select(fYEAR, Tier5, value = all_of(var)) %>%
+#   filter(fYEAR %in% unique(dat_data$fYEAR)) %>%
+#   droplevels()
+
+# p_dist_all <- ggplot()+ geom_boxplot(
+#   data = dat_values_all,
+#   aes(x = as.factor(fYEAR), y = value),
+#   inherit.aes = FALSE,
+#   fill = "grey80",
+#   alpha = 0.5
+# )
 ```
 
 ```{r}
@@ -542,7 +580,7 @@ ggsave(p1, filename = "../figures/GBR_region.png", width = 8, height = 8)
 
 The Australian Great Barrier Reef (GBR) is divided into six marine ecoregions (also named Natural Resource Management (NRM) regions here), each managed by a different regional organization. In this case study, we focused on the NRM regions located in the central section of the GBR (15.4–20.7° S), comprising three NRM regions (@fig-map-1). Two of these regions, Wet Tropics and Burdekin are full included in this section, along with 58.3% of the Mackay Whitsunday region. The Central GBR reef area is estimated at 5283 km² with 4% of the tiers containing data.    
 
-Coral cover observations were extracted from the database on 30 July 2025. A total of 1728 transects from 358 coral reefs collected between 2006 and 2024, across five monitoring programs. 
+Coral cover observations were extracted from the ReefCloud database on 30 July 2025. A total of 1728 transects from 358 coral reefs collected between 2006 and 2024, across five monitoring programs. 
 
 ```{r, fig.width=12, fig.height=14}
 #| include: true
@@ -556,9 +594,9 @@ p1
 
 #### Wet Tropics
 
-The Wet Tropics reef area is estimated at 1441 km² with 7.1% of the tiers containing data from 220 coral reefs and 856 transects. Five monitoring programs were established in the region with varying temporal resolutions (@tbl-1). At the data-tier level, observed coral cover varied from 2.21\% to 74.6\% with a median coral cover values estimated at 23.76\% between 2006 to 2024 (@fig-data-1). 
+The Wet Tropics reef area is estimated at 1441 km² with 7.1% of the tiers containing data from 220 coral reefs and 856 transects. Five monitoring programs were established in the region with varying temporal resolutions (@tbl-1). At the local scale, observed coral cover varied from 2.21\% to 74.6\% with a median coral cover values estimated at 23.76\% between 2006 to 2024 (@fig-data-1). 
 
-The extracted disturbance values revealed multiple potential events, including four years with non-zero Degree Heating Weeks (DHW) values and eight years with detected exposure to cyclonic waves (@fig-dist-1). Despite covering only a small portion of the region, the data-tiers captured disturbance intensity that reflected the broader NRM regional signal. Notably, the 2017 and 2024 heat stress event and, 2023 cyclone appeared more severe within the data-tiers compared to the regional mean, with high DHW values and hours of wave exposure, respectively.  
+The extracted disturbance values revealed multiple potential events, including four years with non-zero Degree Heating Weeks (DHW) values and eight years with detected exposure to cyclonic waves (@fig-dist-1). Despite covering only a small portion of the region, tiers with data (data-tier) captured disturbance intensity that reflected the broader NRM regional signal. Notably, the 2017 and 2024 heat stress event and, 2023 cyclone appeared more severe within the data-tiers compared to the regional mean, with high DHW values and hours of wave exposure, respectively.  
 
 
 ```{r}
@@ -1443,20 +1481,19 @@ p_pred_M
 p_unc_M
 ```
 
-### Attribution of Disturbances {.unnumbered}
+### Association with Disturbances {.unnumbered}
 
 #### Wet Tropics
 
-In the Wet Tropics, cyclone exposure at lag0 and lag1, as well as heat stress across all time lags showed significant negative regional effects, with 95% prediction intervals not overlapping zero. The largest absolute decline between the minimum and maximum observed disturbance levels was associated with cyclone exposure at lag1, corresponding to a 37.6% reduction in coral cover (95% prediction interval: −41.0% to −3.1%, @fig-cond-all-1). Heat stress was associated with a 18.3% decline (95% prediction interval: −23.3% to −11.5%), with the magnitude of decline decreasing with increasing lag: 15.1% at lag 1 (−20.7% to −7.0%) and 7.4% at lag 2 (−11.6% to −0.5%).
+In the Wet Tropics, cyclone exposure at lag0 and lag1, as well as heat stress across all time lags were significantly  negatively associated with regional coral cover, with 95% prediction intervals not overlapping zero. The largest absolute difference between the minimum and maximum observed disturbance levels occurred for cyclone exposure at lag 1, corresponding to a 37.6% reduction in coral cover (95% prediction interval: −41.0% to −3.1%, @fig-cond-all-1). Heat stress was associated with an 18.3% reduction in coral cover (−23.3% to −11.5%), and this difference declined with increasing lag: 15.1% at lag 1 (−20.7% to −7.0%) and 7.4% at lag 2 (−11.6% to −0.5%).
 
-Spatially, increasing magnitude of DHW alone (i.e., excluding other disturbances and time-lag effects) contributed to regional declines in coral cover (@fig-cond-space-1), with absolute losses estimated to range from 3.5% to 10.9%, and a regional average decline of 7.0% (@fig-cond-space-change-1).  
-
+Spatially, higher DHW alone (i.e., excluding other disturbances and time-lag effects) was associated with regional differences in coral cover (@fig-cond-space-1), with absolute differences estimated to range from 3.5% to 10.9%, and a regional average difference of 7.0% (@fig-cond-space-change-1).
 ```{r, fig.width=10, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-all-1
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Wet Tropics. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
+#| fig-cap: Association with Disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Wet Tropics. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
 all_plots_1
 ```
 
@@ -1480,16 +1517,16 @@ p_WT
 
 #### Burdekin
 
-In the Burdekin region, a significant negative effect was detected only for cyclone exposure at lag 1. This disturbance was associated with a large regional decline, with coral cover predicted to decrease by 42.6% between the minimum and maximum observed cyclone exposure values (95% prediction interval: −43.3% to −33.3%, @fig-cond-all-2).
+In the Burdekin region, a significant negative association was detected only for cyclone exposure at lag 1. This disturbance was associated with a large regional difference, with coral cover predicted to decrease by 42.6% between the minimum and maximum observed cyclone exposure values (95% prediction interval: −43.3% to −33.3%, @fig-cond-all-2).
 
-Increasing exposure to cyclonic waves from 0 to 30 hours (@fig-cond-space-2) was associated with varying degrees of coral cover decline across the region, ranging from 3.2% to 24.3%, with an average decline of 13.6%. Most regional estimates (75% percentile) fell between 11.9% and 24.3%, indicating that the majority of areas experienced moderate to large declines (@fig-cond-space-change-2).  
+Higher exposure to cyclonic waves from 0 to 30 hours (@fig-cond-space-2) was associated with varying regional differences in coral cover, ranging from 3.2% to 24.3%, with an average decline of 13.6%. Most regional estimates (75% percentile) fell between 11.9% and 24.3%, indicating that the majority of areas experienced moderate to large declines (@fig-cond-space-change-2).  
 
 ```{r, fig.width=10, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-all-2
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Burdekin. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
+#| fig-cap: Association with Disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Burdekin. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
 all_plots_2
 ```
 
@@ -1514,16 +1551,16 @@ p_B
 
 #### Mackay Whitsunday
 
-In the Mackay Whitsunday region, cyclone exposure showed significant negative regional effects across all time lags, while heat stress was significant only at lag 1. The largest absolute decline between the minimum and maximum observed cyclone exposure levels was estimated at 43.8% at lag 0 (95% prediction interval: −40.1% to −37.6%), followed by 42.1% at lag 2 (−39.3% to −29.0%) and 35.1% at lag 1 (−36.9% to −16.3%, @fig-cond-all-3). Heat stress at lag 1 was associated with a smaller decline of 11.0%, although with substantial uncertainty (95% prediction interval: −18.9% to -1.5%).
+In the Mackay Whitsunday region, cyclone exposure was significantly negatively associated with regional coral cover across all time lags, while heat stress was significant only at lag 1. The largest absolute difference between the minimum and maximum observed cyclone exposure levels was estimated at 43.8% at lag 0 (95% prediction interval: −40.1% to −37.6%), followed by 42.1% at lag 2 (−39.3% to −29.0%) and 35.1% at lag 1 (−36.9% to −16.3%, @fig-cond-all-3). Heat stress at lag 1 was associated with a smaller decline of 11.0%, with large uncertainty (−18.9% to -1.5%).
 
-Comparing predictions under no cyclonic wave exposure at lag 1 with those under high exposure across space (@fig-cond-space-3) revealed stronger declines in the northern section of the region (@fig-cond-space-change-3), with coral cover losses reaching up to 19.9% and a regional average decline of 11.2%.  
+Comparing predictions under no cyclonic wave exposure at lag 1 with those under high exposure across space (@fig-cond-space-3) showed larger declines in the northern section of the region (@fig-cond-space-change-3), with coral cover losses reaching up to 19.9% and a regional average decline of 11.2%.  
 
 ```{r, fig.width=10, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-all-3
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Mackay Whitsunday. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
+#| fig-cap: Association with Disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Mackay Whitsunday. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
 all_plots_3
 ```
 
@@ -1544,7 +1581,7 @@ combined_plot_Mackay
 p_MW
 ```
 
-### Model validation {.unnumbered}
+#### Model checking {.unnumbered}
 
 Model performance shows a strong agreement between predicted and observed coral cover at the data-tier level, with an $R^2$ scores ranging from 79\% for Burdekin up to 89\% for the Wet Tropics (@r-squared) with normally distributed residuals and absences of overdispersions (@mod-res). 
 

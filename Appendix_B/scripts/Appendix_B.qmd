@@ -1,6 +1,6 @@
 ---
-title: "Appendix A"
-subtitle: "USE CASE STUDY 2: SPATIAL VARIABILITY IN DATA RESOLUTIONS"
+title: "Appendix B"
+subtitle: "USE CASE STUDY: AMERICAN SAMOA"
 authors:
   - name: Julie Vercelloni
     corresponding: true
@@ -78,7 +78,7 @@ To be displayed on a big screen.
 #| echo: false
 #| eval: true
 rm(list=ls())
-setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_A/scripts")
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B/scripts")
 
 source("../R/functions.R")
 
@@ -101,6 +101,7 @@ library(kableExtra)
 library(wesanderson)
 library(rnaturalearth)
 
+appendix_dir <- "../figures" 
 ```{r}
 #| include: false
 #| echo: false
@@ -122,22 +123,47 @@ BY_TIER = 5
 load("../data/reef_layer.sf.RData")
 
 # central GBR only
-tiers <- c("1819", "1808") #"1820", 
+depth_strata <- c("shallow", "deep")  
 
 # Define focal tier
 FOCAL_TIER <- paste0('Tier', as.numeric(BY_TIER) - 1)
-data.grp.agg <- read.csv("../data/reef_data_aggregated.csv")
+data.grp.agg <- read.csv("../data/reef_data_aggregated.csv") 
+
+# Plots raw data 
+g <- ggplot(
+  data.grp.agg |> 
+    mutate(Tier5 = as.character(Tier5)),
+  aes(x = fYEAR, y = COUNT / TOTAL, group = (Tier5))
+) +
+  geom_line(color = "grey40", alpha = 0.6, linewidth = 0.6) +
+  geom_point(aes(color = Tier5), size = 1.8, alpha = 0.8) +
+  theme_pubr() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.y = element_line(color = "grey85"),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    x = "Year",
+    y = "Proportion (COUNT / TOTAL)"
+  )
+
+TIER <- unique(data.grp.agg$Tier4)
+
 
 #########################
 #### START LOOP BY TIER
 #########################
 
-for (i in seq_along(tiers)) {
-TIER <<- as.character(tiers[i])
+#for (i in seq_along(depth_strata)) {
+
+#STRATA <<- as.character(depth_strata[i])
 
 data.grp.tier <- data.grp.agg |>
-      dplyr::filter(Tier4 == TIER) |>
+     # dplyr::filter(Depth_strata == STRATA) |>
       dplyr::mutate(Tier5 = as.character(Tier5))
+
 
 tier.sf.joined <- tier.sf |>
     dplyr::left_join(
@@ -152,23 +178,30 @@ full_cov_raw <- full_cov |>
       dplyr::rename(fYEAR = year) |>
       dplyr::filter(between(fYEAR, min(data.grp.tier$fYEAR), max(data.grp.tier$fYEAR)))
 
+full_cov_raw_dat <- full_cov_raw %>%
+  filter(Tier5 %in% data.grp.tier$Tier5) %>%
+  filter(fYEAR %in% unique(data.grp.tier$fYEAR))
+
+
 ## Apply quality control thresholds
-out_cycl <- quantile(full_cov_raw$max_cyc, probs = 0.975)
-out_dhw  <- quantile(full_cov_raw$max_dhw, probs = 0.975)
+out_cycl <- quantile(full_cov_raw$max_cyc, probs = 0.975, na.rm = T)
+out_dhw  <- quantile(full_cov_raw$max_dhw, probs = 0.975, na.rm = T)
     
 HexPred_sf <- full_cov_raw |>
       dplyr::mutate(As.Data = ifelse(Tier5 %in% data.grp.tier$Tier5, "Yes", "No")) |>
       dplyr::mutate(across(matches("^max_cyc.*"), ~ ifelse(.x >= out_cycl & As.Data == "No", NA, .x))) |>
       dplyr::mutate(across(matches("^max_dhw.*"), ~ ifelse(.x >= out_dhw & As.Data == "No", NA, .x)))
 
-## Select covariates
-selected_covar <- select_covariates(HexPred_sf) 
-selected_covar <- selected_covar[!grepl("\\.(lag3|lag5)$", selected_covar)]
+# ## Select covariates using info across regions 
+# selected_covar <- select_covariates(HexPred_sf) 
+# selected_covar <- selected_covar[!grepl("\\.(lag3|lag5)$", selected_covar)]
 
-## Check for collinearity 
+# ## Select covariates using info at data locations
+# selected_covar <- select_covariates(full_cov_raw_dat)
 
-selected_covar <- filter_non_collinear(HexPred_sf, selected_covar, threshold = 0.7)
+# ## Check for collinearity 
 
+# selected_covar <- filter_non_collinear(full_cov_raw_dat, selected_covar, threshold = 0.7)
 
 ## Make reefid
 
@@ -197,17 +230,17 @@ test_reefid <- HexPred_reefid2 %>% filter(Tier5 %in% data.grp.tier.ready$Tier5)
 obj_frk <- frk_prep_3L(data.grp.tier.ready, HexPred_reefid2)  
 
 ## Define model formula
-model_formula <- if (length(selected_covar) == 0 && length(unique(test_reefid$reefid)) > 1) {
-        as.formula("COUNT ~ 1 + (1 | reefid)")
-       } else if (length(selected_covar) == 0 && length(unique(test_reefid$reefid)) == 1) {
-        as.formula("COUNT ~ 1")
-      } else if (length(selected_covar) != 0 && length(unique(test_reefid$reefid)) == 1) {
-        as.formula( paste("COUNT ~ 1 +", paste(selected_covar, collapse = " + ")))
-      } else {
-       as.formula(paste("COUNT ~ 1 + (1 | reefid) +", paste(selected_covar, collapse = " + ")))
-  }
+# model_formula <- if (length(selected_covar) == 0 && length(unique(test_reefid$reefid)) > 1) {
+#         as.formula("COUNT ~ 1 + (1 | reefid)")
+#        } else if (length(selected_covar) == 0 && length(unique(test_reefid$reefid)) == 1) {
+#         as.formula("COUNT ~ 1")
+#       } else if (length(selected_covar) != 0 && length(unique(test_reefid$reefid)) == 1) {
+#         as.formula( paste("COUNT ~ 1 +", paste(selected_covar, collapse = " + ")))
+#       } else {
+#        as.formula(paste("COUNT ~ 1 + (1 | reefid) +", paste(selected_covar, collapse = " + ")))
+#   }
 
-model_formula
+model_formula <- COUNT ~ 1 + (1 | reefid) + max_cyc + max_dhw 
 
 ## Fit FRK model
 M <- FRK(
@@ -256,9 +289,9 @@ saveRDS(
         obj_frk = obj_frk,
         HexPred_reefid2 = HexPred_reefid2
       ),
-      file = paste0("../data/FRK_", TIER, "_V2.RData")
+      file = paste0("../data/FRK_shallow.RData")
     )
-}
+#}
 ```
 
 
@@ -269,9 +302,7 @@ saveRDS(
  
 # Read model outputs 
 model_files <- c(
-  "../data/FRK_1820_V2.RData", 
-  "../data/FRK_1808_V2.RData", 
-  "../data/FRK_1819_V2.RData"
+  "../data/FRK_shallow.RData"
 )
 
 mod_ <- map(model_files, readRDS)
@@ -282,21 +313,9 @@ names(mod_) <- map2_chr(
   ~ paste0(
       "FRK",
       "_",
-      unique(.x$data.grp.tier$Tier4)
+      unique(.x$data.grp.tier$Depth_strata)
     )
 )
-
-tier_map <- c(
-  "FRK_1819" = "Wet Tropics_1819",
-  "FRK_1808" = "Burdekin_1808",
-  "FRK_1820" = "Mackay Whitsunday_1820"
-)
-
-names(mod_) <- tier_map[names(mod_)]
-ordered <- c("Wet Tropics_1819", "Burdekin_1808", "Mackay Whitsunday_1820")
-mod_ <- mod_[ordered]
-
-appendix_dir <- "../figures" 
 ```
 
 ```{r}
@@ -343,23 +362,12 @@ plots_cyc <- imap(
    # ggtitle(sub("_.*", "", .y))
 )
 
-dist_WetTropic <- plots_dhw[[1]] +  plots_cyc[[1]] + 
+dist_shallow <- plots_dhw[[1]] +  plots_cyc[[1]] + 
    plot_layout(ncol = 2, axis_titles = "collect") +  
    plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Wet Tropics"
+  title = "American Samoa"
 )
 
-dist_Burkedin <- plots_dhw[[2]] +  plots_cyc[[2]] + 
-   plot_layout(ncol = 2, axis_titles = "collect") +  
-   plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Burkedin"
-)
-
-dist_Mackay <- plots_dhw[[3]] +  plots_cyc[[3]] + 
-   plot_layout(ncol = 2, axis_titles = "collect") +  
-   plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Mackay Whitsunday"
-)
 ```
 
 ```{r}
@@ -381,7 +389,7 @@ unique_hex <- mod_ %>%
 
     df_hex <- df_hex %>%
       mutate(
-        Tier4 = unique(.x$data.grp.tier$Tier4)[1]
+        Depth_strata = unique(.x$data.grp.tier$Depth_strata)[1]
       )
     df_hex
   }) %>%
@@ -403,71 +411,48 @@ tier.sf.joined <- tier.sf |>
       by = c("Tier5" = "Tier5")
     )
 
-lat_box <- st_bbox(c(
-  xmin = 142,
-  xmax = 152,
-  ymin = -20.7,
-  ymax = -15.4
-), crs = st_crs(tier.sf.joined))
-
-lat_box_sf <- st_as_sfc(lat_box)
-
-tier_filtered <- st_intersection(tier.sf.joined, lat_box_sf) %>% filter(!Tier4 == "1825")
-tier_filtered %>% group_by(Tier4) %>% count()
-tier4_polygons <- tier.sf.joined %>% filter(Tier4 %in% unique(tier_filtered$Tier4)) %>% group_by(Tier4) %>% count()
-tier4_polygons_filtered <- tier_filtered %>% group_by(Tier4) %>% count()
-
-tier4_south  <- unique_hex %>%
-  mutate(Tier4_NRM = case_when(Tier4 == "1819" ~ "Wet Tropics",
-                               Tier4 == "1808" ~ "Burdekin",
-                               Tier4 == "1820" ~ "Mackay Whitsunday",
-                               TRUE ~ NA_character_))
-tier4_south$Tier4_NRM <- as.factor(tier4_south$Tier4_NRM)
-tier4_south$Tier4_NRM <- factor(tier4_south$Tier4_NRM, levels = c("Wet Tropics", "Burdekin", "Mackay Whitsunday"))
-
-# Bounding box of the filtered tiers
-bbox_filtered <- st_bbox(tier_filtered)
-bbox_poly <- st_as_sfc(bbox_filtered)
-
-roi_bbox  <- st_bbox(tier4_polygons)
+## Whole American Samoa 
+roi_bbox  <- st_bbox(tier.sf.joined)
 roi_poly  <- st_as_sfc(roi_bbox)
-aus <- ne_countries(scale = "medium", country = "Australia", returnclass = "sf")
+asm <- ne_countries(scale = "medium", country = "American Samoa", returnclass = "sf")
 
 # Crop coastline to ROI
-aus_crop <- st_intersection(aus, roi_poly)
+asm_crop <- st_intersection(asm, roi_poly)
 
-cities <- ne_download(scale = "medium",
-                      type = "populated_places",
-                      category = "cultural",
-                      returnclass = "sf")
+# lat_box <- st_bbox(c(
+#   xmin = 142,
+#   xmax = 152,
+#   ymin = -20.7,
+#   ymax = -15.4
+# ), crs = st_crs(tier.sf.joined))
 
-aus_cities <- cities %>%
-  filter(SOV0NAME == "Australia") %>%
-  st_intersection(roi_poly)
+# lat_box_sf <- st_as_sfc(lat_box)
 
-# Extract coordinates for cities
-aus_cities_coords <- aus_cities %>%
-  mutate(
-    lon = st_coordinates(geometry)[,1],
-    lat = st_coordinates(geometry)[,2]
-  ) %>%
-  filter(!NAME == "Rockhampton") %>%
-  dplyr::select(lon, lat, NAME)
+# tier_filtered <- st_intersection(tier.sf.joined, lat_box_sf) %>% filter(!Tier4 == "1825")
+# tier_filtered %>% group_by(Tier4) %>% count()
+# tier4_polygons <- tier.sf.joined %>% filter(Tier4 %in% unique(tier_filtered$Tier4)) %>% group_by(Tier4) %>% count()
+# tier4_polygons_filtered <- tier_filtered %>% group_by(Tier4) %>% count()
 
-add_cities <- tibble(
-  NAME = c("Cooktown", "Mackay"),
-  lon  = c(145.25, 149.186),
-  lat  = c(-15.47, -21.141)
-) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  mutate(
-    lon = st_coordinates(geometry)[,1],
-    lat = st_coordinates(geometry)[,2]
-  ) 
+# tier4_south  <- unique_hex %>%
+#   mutate(Tier4_NRM = case_when(Tier4 == "1819" ~ "Wet Tropics",
+#                                Tier4 == "1808" ~ "Burdekin",
+#                                Tier4 == "1820" ~ "Mackay Whitsunday",
+#                                TRUE ~ NA_character_))
+# tier4_south$Tier4_NRM <- as.factor(tier4_south$Tier4_NRM)
+# tier4_south$Tier4_NRM <- factor(tier4_south$Tier4_NRM, levels = c("Wet Tropics", "Burdekin", "Mackay Whitsunday"))
 
-aus_cities_coords <- bind_rows(aus_cities_coords, add_cities)
+# # Bounding box of the filtered tiers
+# # bbox_filtered <- st_bbox(tier_filtered)
+# # bbox_poly <- st_as_sfc(bbox_filtered)
 
-tier4_south_showed <- tier4_south %>% 
+# roi_bbox  <- st_bbox(tier4_polygons)
+# roi_poly  <- st_as_sfc(roi_bbox)
+# aus <- ne_countries(scale = "medium", country = "Australia", returnclass = "sf")
+
+# # Crop coastline to ROI
+# aus_crop <- st_intersection(aus, roi_poly)
+
+tier4_south_showed <- unique_hex %>% 
   filter(Tier5 %in% tier5_list$Tier5) %>%
   st_centroid() %>%                     
   mutate(
@@ -476,53 +461,76 @@ tier4_south_showed <- tier4_south %>%
   ) %>%
   st_drop_geometry()
 
+add_islands <- tibble(
+  NAME = c("Tutuila", "Ofu-Olosega", "Ta‘ū", "Rose Atoll", "Swains Island"),
+  lon  = c(-170.700, -169.630, -169.500, -168.200, -171.076),
+  lat  = c(-14.275, -14.190, -14.240, -14.550, -11.053)
+) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  mutate(
+    lon = st_coordinates(geometry)[,1],
+    lat = st_coordinates(geometry)[,2]
+  ) 
+## Plots per islands 
+
+add_islands <- add_islands %>%
+  mutate(buffer_deg = c(0.2, 0.08, 0.0879, 0.08, 0.05)) # one buffer per island
+
+
+# Generate plots
+plots_per_island <- plot_islands_custom_buffer(add_islands)$plots
+
+# Example: display a specific island
+
+p1 <- plots_per_island[["Tutuila"]]
+p2 <- plots_per_island[["Ofu-Olosega"]]
+p3 <- plots_per_island[["Ta‘ū"]]
+p4 <- plots_per_island[["Rose Atoll"]]
+p5 <- plots_per_island[["Swains Island"]]
+
+p_islands <- p1 + p2 + p3 + p4 + p5 +
+   plot_layout(nrow = 2, axis_titles = "collect") +  
+   plot_annotation(tag_levels = "a", tag_suffix = ')'
+)
+p_islands
+
+ggsave(p_islands, filename = "../figures/ASM_region_islands.png", width = 12, height = 10)
+
+## All together
+hex_island <- plot_islands_custom_buffer(add_islands)$unique_hex_island
+
+
+data_island <- mod_[[1]]$data.grp.tier  %>%
+left_join(hex_island)
+
 p1 <- ggplot() +
-  geom_sf(data = aus_crop,
+  geom_sf(data = asm_crop,
           fill = "grey95",
           colour = "black",
           linewidth = 0.6) +
-  geom_sf(data = tier4_polygons,
+  geom_sf(data = tier.sf.joined,
           fill = NA,
           colour = "black",
           alpha = 0.2) +
-  geom_sf(data = tier4_south,
-          aes(fill = Tier4_NRM),
-          colour = "#4D4D4D",
+  geom_sf(data = hex_island,
+          aes(fill = NAME),
           alpha = 0.8,
           linewidth = 0.05 ) +
-  geom_point(data = aus_cities_coords,
-             aes(x = lon, y = lat),
-             colour = "black", size = 2) +
-  geom_text_repel(data = aus_cities_coords,
+  geom_text_repel(data = add_islands,
                    aes(x = lon, y = lat, label = NAME),
                    size = 3,
-                   nudge_x = -1,
-                   box.padding = 0.5,
-                   nudge_y = -.5,
-                   segment.curvature = -0.1,
-                   segment.ncp = 3,
-                   segment.angle = 20) +
+                   nudge_x = -.3,
+                   box.padding = 0.1,
+                   nudge_y = -.1) +
   geom_point(data = tier4_south_showed,
            aes(x = lon, y = lat),
-           shape = 21, fill = "red", colour = "black", size = 1.5, alpha = 0.6) +
+           shape = 21, fill = "red", colour = "black", size = 1, alpha = 0.6) +
   coord_sf(xlim = c(roi_bbox["xmin"], roi_bbox["xmax"]),
            ylim = c(roi_bbox["ymin"], roi_bbox["ymax"])) +
   ggpubr::theme_pubr() +
-  theme(legend.position = "top") +
   xlab("Longitude") +
-  ylab("Latitude") +
-  scale_fill_manual("Region",
-  values = c(
-    "Wet Tropics" = "#2C7FB8",       
-    "Burdekin" = "#E69F00",           
-    "Mackay Whitsunday" = "#1B9E77"   
-  ),
-  na.value = "grey80"
-  ) + 
-  scale_colour_manual(
-  name = NULL,
-  values = c("Central GBR" = "#9B2226")
-  ) + annotation_scale(
+  ylab("Latitude") + 
+  annotation_scale(
   location = "bl",        
   width_hint = 0.3
 ) +
@@ -532,50 +540,130 @@ annotation_north_arrow(
   style = north_arrow_fancy_orienteering,
   pad_x = unit(0.1, "cm"),
   pad_y = unit(.02, "cm")
-)
+) +
+      scale_fill_manual(values = c(
+  "Tutuila"       = "#5b2a86",  
+  "Ofu-Olosega"   = "#2c7fb8",  
+  "Ta‘ū"          = "#41b6c4",  
+  "Rose Atoll"    = "#7fcdbb", 
+  "Swains Island" = "#f768a1"
+)) + theme(legend.position = "none")
 
-ggsave(p1, filename = "../figures/GBR_region.png", width = 8, height = 8)
+ggsave(p1, filename = "../figures/ASM_region_appendix.png", width = 8, height = 8)
+
+## Paper 
+bbox_filtered <- st_bbox(unique_hex)
+bbox_poly <- st_as_sfc(bbox_filtered) %>%
+  st_buffer(0.05) 
+
+tier5_marked <- c("1912", "1902", "1936") #"10746",  "11305", 
+tier4_south_showed <- unique_hex %>% 
+  filter(Tier5 %in% tier5_marked) %>%
+  st_centroid() %>%                     
+  mutate(
+    lon = st_coordinates(.)[,1],
+    lat = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry()
+
+pp1 <- ggplot() +
+  geom_sf(data = asm_crop,
+          fill = "grey95",
+          colour = "black",
+          linewidth = 0.6) +
+  geom_sf(data = tier.sf.joined,
+          fill = NA,
+          colour = "black",
+          alpha = 0.2) +
+  geom_sf(data = hex_island,
+          aes(fill = NAME),
+          colour = "#4D4D4D",
+          alpha = 0.8,
+          linewidth = 0.05 ) +
+  geom_text_repel(data = tier4_south_showed,
+                  aes(x = lon, y = lat, label = Tier5),
+                  size = 4,
+                 nudge_x = -.1,
+                   box.padding = 0.1,
+                   nudge_y = .3) +
+  geom_sf(data = bbox_poly,
+        aes(colour = "American Samoa"),
+          fill = NA,
+          linewidth = 0.9) +
+  coord_sf(xlim = c(roi_bbox["xmin"], roi_bbox["xmax"]),
+           ylim = c(roi_bbox["ymin"], roi_bbox["ymax"])) +
+  ggpubr::theme_pubr() +
+  xlab("Longitude") +
+  ylab("Latitude") + 
+  scale_colour_manual(
+  name = NULL,
+  values = c("American Samoa" = "#9B2226")
+  ) + 
+  annotation_scale(
+  location = "bl",        
+  width_hint = 0.3
+  ) +
+  annotation_north_arrow(
+  location = "bl",         
+  which_north = "true",
+  style = north_arrow_fancy_orienteering,
+  pad_x = unit(0.1, "cm"),
+  pad_y = unit(.02, "cm")
+  ) +
+  scale_fill_manual("Island", values = c(
+  "Tutuila"       = "#5b2a86",  
+  "Ofu-Olosega"   = "#2c7fb8", 
+  "Ta‘ū"          = "#41b6c4", 
+  "Rose Atoll"    = "#7fcdbb",  
+  "Swains Island" = "#f768a1"
+)) + theme(legend.position = "top")
+pp1 
+
+ggsave(pp1, filename = "../figures/ASM_region.png", width = 10, height = 10)
 
 ## Get info region 
 ```
-### The American Samoa {.unnumbered}
+### American Samoa {.unnumbered}
 
-The Australian Great Barrier Reef is divided into six Natural Resource Management (NRM) regions, each managed by a different regional organization. In this case study, we focused on the NRM regions located in the central section of the GBR (15.4–20.7° S), comprising three NRM regions (@fig-map-1). Two of these regions, Wet Tropics and Burkedin are full included in this section, along with 58.3% of the Mackay Whitsunday region. The Central GBR reef area is estimated at 5282 km² with 4% of the tiers containing data.    
+American Samoa comprises five islands, representing a total reef area of 59.2 km², with 75% of tiers containing data. This case study focuses on islands belonging to the single ecoregion that encompasses the entire country (@fig-map-1) and its islands (@fig-map-2).
 
-Coral cover observations were extracted from the database on 30 July 2025. A total of 1728 transects from 358 coral reefs collected between 2006 and 2024, across five monitoring programs. 
+Coral cover observations were extracted from the ReefCloud database on 15 March 2026. A total of 507 transects from 507 sites collected between 2015 and 2023 by the NOAA's U.S. Pacific Islands National Coral Reef Monitoring Program (@tbl-1) at depths varying 3 and 10 metres. At the data-tier level, observed coral cover varied from 0.5\% to 69.6\% with a median coral cover values estimated at 25.3\% between 2015 to 2023 (@fig-data-1). 
 
-```{r, fig.width=12, fig.height=14}
+The extracted disturbance values indicated multiple potential events, including five years with non-zero Degree Heating Weeks (DHW) and two years with detected exposure to cyclonic waves (@fig-dist-1). Disturbance events were infrequently captured in the data tiers: only the 2015 heat-stress event was recorded at higher intensity, and Cyclone Gita (2018) at a comparable intensity to the regional signal.
+
+```{r, fig.width=8, fig.height=10}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-map-1
-#| fig-cap: Locations of the three regions along the Great Barrier Reef. Red dots indicates the tiers containing coral cover observations between 2006-2024. 
+#| fig-cap: Locations of the five islands across the American Samoa. Red dots indicates the tiers containing coral cover observations between 2015-2023. 
 p1
 ```
 
-
-#### Wet Tropics
-
-The Wet Tropics reef area is estimated at 1441 km² with 7.1% of the tiers containing data from 220 coral reefs and 856 transects. Five monitoring programs were established in the region with varying temporal resolutions (@tbl-1). At the data-tier level, observed coral cover varied from 2.21\% to 74.6\% with a median coral cover values estimated at 23.76\% between 2006 to 2024 (@fig-data-1). 
-
-The extracted disturbance values revealed multiple potential events, including four years with non-zero Degree Heating Weeks (DHW) values and eight years with detected exposure to cyclonic waves (@fig-dist-1). Despite covering only a small portion of the region, the data-tiers captured disturbance intensity that reflected the broader NRM regional signal. Notably, the 2017 and 2024 heat stress event and, 2023 cyclone appeared more severe within the data-tiers compared to the regional mean, with high DHW values and hours of wave exposure, respectively.  
-
+```{r, fig.width=8, fig.height=6}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-map-2
+#| fig-cap: Zoom-in on the islands. Red dots indicates the tiers containing coral cover observations between 2015-2023. 
+p_islands
+```
 
 ```{r}
 #| label: tbl-1
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in the Wet Tropics. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_WetTropics")  
+#| tbl-cap: Summary of public datasets available in the American Samoa. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
+print_attr_plots(appendix_dir, "summary_table_ASM")  
 ```
 
 
-```{r, fig.width=6, fig.height=8}
+```{r, fig.width=5, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-data-1
-#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in the Wet Tropics (2006–2024). White gaps represent missing data.
+#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in the American Samoa (2015–2023). White gaps represent missing data.
 plots_hov[[1]]
 ```
 
@@ -584,74 +672,8 @@ plots_hov[[1]]
 #| echo: false
 #| eval: true
 #| label: fig-dist-1
-#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2006 and 2024 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
-dist_WetTropic
-```
-
-#### Burkedin
-
-Burkedin reef area is estimated at 1507 km² with 4.2% of the tiers containing data from 178 coral reefs and 496 transects. The temporal resolutions of data collected in this NRM region were similar to the Wet Tropics (@tbl-2). At the data-tier level, coral cover varied from 1.1% to 80.3% with an average coral cover estimated at 20.9% between 2007-2024 (@fig-data-2).  
-
-We detected seven years with non-zero DHW values and nine years with detected exposure to cyclonic waves (@fig-dist-2), exceeding the number of potential disturbance events observed in the Wet Tropics. Mean DHW values recorded at the data-tier tended to be higher than regional means in 2017, 2020, 2022 and 2024. In contrast, cyclone exposure showed the opposite pattern, with mean values generally lower at the data-tier than across all tiers.
-
-```{r}
-#| label: tbl-2
-#| eval: true
-#| echo: false
-#| tbl-cap: Summary of public datasets available in Burkedin. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_Burkedin")  
-  
-```
-
-```{r, fig.width=6, fig.height=8}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-data-2
-#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in Burkedin (2007–2024). White gaps represent missing data.  
-plots_hov[[2]]
-```
-
-```{r, fig.width=12, fig.height=14}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-dist-2
-#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2006 and 2024 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
-dist_Burkedin
-```
-
-#### Mackay Whitsunday 
-
-Mackay Whitsunday reef area is estimated at 2601 km² with 1.3% of the tiers containing data from 94 coral reefs and 338 transects. Three monitoring programs were present in the region with mainly medium- and long-term data (@tbl-3). At the data-tier level, coral cover values varied from a minimum of 1.8% to a maximum of 67.8% between 2007 and 2024 with a regional average of 24.8% (@fig-data-3). 
-
-This region experienced the highest number of recorded cyclone events (nine), with a maximum mean cyclone exposure estimated at 42 hours of wave exposure (@fig-dist-3).
-
-```{r}
-#| label: tbl-3
-#| eval: true
-#| echo: false
-#| tbl-cap: Summary of public datasets available in Mackay Whitsunday. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_Mackay")  
-  
-```
-
-```{r, fig.width=6, fig.height=8}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-data-3
-#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in Mackay Whitsunday (2007–2024). White gaps represent missing data.   
-plots_hov[[3]]
-```
-
-```{r, fig.width=12, fig.height=14}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-dist-3
-#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2006 and 2024 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
-dist_Mackay
+#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2015 and 2023 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
+dist_shallow
 ```
 
 ```{r}
@@ -679,74 +701,12 @@ post_dist_df_all   <- res$post_dist_df_all
 #| eval: false
 
 #### Local scale {.unnumbered}
-pred_local <- spatial_agg(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier.sf, "Tier5")
+pred_local_shallow <- spatial_agg(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier.sf, tier_col = "Tier5")
 
-list_tier5 <-  unique(pred_local$pred_table$Tier5)
+unique_hex_Tutuila <- plot_islands_custom_buffer(add_islands)$unique_hex_island %>%
+  filter(NAME == "Tutuila") 
 
-# All the tier5
-plots <- pred_local$pred_table %>%
-     dplyr::left_join(
-        tiers.lookup |> dplyr::select(-reef_area, -tier_id),
-        by = c("Tier5" = "Tier5")
-       ) %>% 
-  droplevels() %>%
-  filter(Tier4 == "1819") %>%
-  mutate( 
-    arrow_symbol = case_when(
-      Change == "Up"   ~ "↑",
-      Change == "Down" ~ "↓",
-      Change == "Flat" ~ "→",
-      TRUE ~ ""
-    )
-  ) %>%
-  split(.$Tier5) %>%
-  imap(~{
-    ggplot(.x) +
-      geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100),
-                  alpha = 0.2,
-                  fill = "#2C7FB8") +
-      geom_line(aes(x = Year, y = Median*100),
-                linewidth = 1.1,
-                colour = "#4D4D4D") +
-      geom_text(
-        aes(x = Year,
-            y = Upper*100 + 3,
-            label = arrow_symbol),
-        size = 6
-      ) +
-      labs(
-        title = .y,
-        x = "Year",
-        y = "Coral cover (%)"
-      ) +
-      ylim(0, 80) +
-      theme_pubr() +
-      theme(
-        axis.text  = element_text(size = 13),
-        axis.title = element_text(size = 15),
-        plot.title = element_text(size = 16),
-        legend.position = "none"
-      )
-  })
-
-p0 <- plots[[which(list_tier5 == 10746)]]
-p0.1 <- plots[[which(list_tier5 == 11100)]]
-p0.3 <- plots[[which(list_tier5 == 11326)]]
-
-p_datano <- p0 + p0.1 + p0.3 +
-   plot_layout(nrow = 2, axis_titles = "collect") +  
-   plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Wet Tropics"
-)
-
-ggsave(p0, filename = "../figures/pred_tier_example1.png",
-        width=6, height=5)
-
-ggsave(p0.1, filename = "../figures/pred_tier_example2.png",
-        width=6, height=5)
-
-ggsave(p0.3, filename = "../figures/pred_tier_example3.png",
-        width=6, height=5)
+list_tier5 <-  unique(pred_local_shallow$pred_table$Tier5)
 
 # Select data-tiers
 
@@ -766,13 +726,16 @@ mean_obs <- mod_[[1]]$data.grp.tier   %>%
     ) %>%
   mutate(Year = as.integer(as.character(fYEAR)))
 
-plots_with_data <- pred_local$pred_table %>%
+mean_obs_Tutuila <- mean_obs %>%
+ filter(Tier5 %in% unique_hex_Tutuila$Tier5) %>%
+ group_by(Tier5) %>% count() %>% arrange(desc(n))
+
+plots_with_data <- pred_local_shallow$pred_table %>%
      dplyr::left_join(
         tiers.lookup |> dplyr::select(-reef_area, -tier_id),
         by = c("Tier5" = "Tier5")
        ) %>% 
   droplevels() %>%
-  filter(Tier4 == "1819") %>%
   filter(Tier5 %in% unique(mean_obs$Tier5)) %>%
   mutate(Year = as.integer(Year)) %>%
   left_join(mean_obs, by = c("Tier5" = "Tier5", "Year" = "Year")) %>%
@@ -789,7 +752,7 @@ plots_with_data <- pred_local$pred_table %>%
     ggplot(.x) +
       geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100),
                   alpha = 0.2,
-                  fill = "#2C7FB8") +
+                  fill = "#5b2a86") +
       geom_line(aes(x = Year, y = Median*100),
                 linewidth = 1.1,
                 colour = "#4D4D4D") +
@@ -820,14 +783,14 @@ plots_with_data <- pred_local$pred_table %>%
       )
   })
 
-p1 <- plots_with_data[[which(list_tier5 == 6931)]]
-p2 <- plots_with_data[[which(list_tier5 == 11305)]]
-p3 <- plots_with_data[[which(list_tier5 == 10770)]]
+p1 <- plots_with_data[[which(list_tier5 == 1912)]]
+p2 <- plots_with_data[[which(list_tier5 == 1927)]]
+p3 <- plots_with_data[[which(list_tier5 == 1936)]]
 
 p_data <- p1 + p2 + p3 +
    plot_layout(nrow = 2, axis_titles = "collect") +  
    plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Wet Tropics"
+  title = "Tutuila"
 )
 ggsave(p1, filename = "../figures/data_tier_example1.png",
         width=6, height=5)
@@ -837,6 +800,76 @@ ggsave(p2, filename = "../figures/data_tier_example2.png",
 
 ggsave(p3, filename = "../figures/data_tier_example3.png",
         width=6, height=5)
+
+
+# All the tier5
+
+setdiff(unique(unique_hex_Tutuila$Tier5),
+        unique(mean_obs_Tutuila$Tier5))
+
+plots <- pred_local_shallow$pred_table %>%
+     dplyr::left_join(
+        tiers.lookup |> dplyr::select(-reef_area, -tier_id),
+        by = c("Tier5" = "Tier5")
+       ) %>% 
+  droplevels() %>%
+  mutate( 
+    arrow_symbol = case_when(
+      Change == "Up"   ~ "↑",
+      Change == "Down" ~ "↓",
+      Change == "Flat" ~ "→",
+      TRUE ~ ""
+    )
+  ) %>%
+  split(.$Tier5) %>%
+  imap(~{
+    ggplot(.x) +
+      geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100),
+                  alpha = 0.2,
+                  fill = "#5b2a86") +
+      geom_line(aes(x = Year, y = Median*100),
+                linewidth = 1.1,
+                colour = "#4D4D4D") +
+      geom_text(
+        aes(x = Year,
+            y = Upper*100 + 3,
+            label = arrow_symbol),
+        size = 6
+      ) +
+      labs(
+        title = .y,
+        x = "Year",
+        y = "Coral cover (%)"
+      ) +
+    #  ylim(0, 80) +
+      theme_pubr() +
+      theme(
+        axis.text  = element_text(size = 13),
+        axis.title = element_text(size = 15),
+        plot.title = element_text(size = 16),
+        legend.position = "none"
+      )
+  })
+
+p0 <- plots[[which(list_tier5 == 1902)]]
+p0.1 <- plots[[which(list_tier5 == 1929)]]
+p0.3 <- plots[[which(list_tier5 == 1950)]]
+
+p_datano <- p0 + p0.1 + p0.3 +
+   plot_layout(nrow = 2, axis_titles = "collect") +  
+   plot_annotation(tag_levels = "a", tag_suffix = ')', 
+  title = "Tutuila"
+)
+
+ggsave(p0, filename = "../figures/pred_tier_example1.png",
+        width=6, height=5)
+
+ggsave(p0.1, filename = "../figures/pred_tier_example2.png",
+        width=6, height=5)
+
+ggsave(p0.3, filename = "../figures/pred_tier_example3.png",
+        width=6, height=5)
+
 ```
 
 ```{r, fig.width=8, fig.height=6}
@@ -844,7 +877,7 @@ ggsave(p3, filename = "../figures/data_tier_example3.png",
 #| echo: false
 #| eval: false
 #| label: fig-pred-data
-#| fig-cap: Examples of three data-tiers with estimated coral trends from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show observed coral cover averaged at the tier level for each year, which were used as the response variable in the spatio-temporal model. 
+#| fig-cap: Examples of three data-tiers with estimated coral trends from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show observed coral cover averaged at the tier level for each year, which were used as the response variable in the spatio-temporal model. 
 p_data
 ```
 ```{r, fig.width=8, fig.height=6}
@@ -852,10 +885,93 @@ p_data
 #| echo: false
 #| eval: false
 #| label: fig-pred-datano
-#| fig-cap: Examples of estimated coral trends at predictive-tiers from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+#| fig-cap: Examples of estimated coral trends at predictive-tiers from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
 p_datano
 ```
 
+```{r}
+#| include: false
+#| echo: false
+#| eval: false
+
+#### Island scale {.unnumbered}
+
+unique_hex_island <- plot_islands_custom_buffer(add_islands)$unique_hex_island
+
+pred_island <- spatial_agg_island(post_dist_df_all, tiers.lookup, tier.sf, unique_hex_island)
+
+plots <- pred_island$pred_table %>%
+  droplevels() %>%
+  mutate(
+    arrow_symbol = case_when(
+      Change == "Up"   ~ "↑",
+      Change == "Down" ~ "↓",
+      Change == "Flat" ~ "→",
+      TRUE ~ ""
+    )
+  ) %>%
+  split(.$NAME) %>%
+  imap(~{
+    ggplot(.x) +
+      geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100, fill = NAME),
+                  alpha = 0.2) +
+      geom_line(aes(x = Year, y = Median*100),
+                linewidth = 1.1,
+                colour = "#4D4D4D") +
+      geom_text(
+        aes(x = Year,
+            y = Upper*100 + 3,
+            label = arrow_symbol),
+        size = 6,
+      family = "Arial Unicode MS"  # or "Segoe UI Symbol"
+      ) +
+      labs(
+        title = .y,
+        x = "Year",
+        y = "Coral cover (%)"
+      ) +
+     # ylim(0, 70) +
+      theme_pubr() +
+      theme(
+        axis.text  = element_text(size = 13),
+        axis.title = element_text(size = 15),
+        plot.title = element_text(size = 16),
+        legend.position = "none"
+      )   +
+  scale_fill_manual("Island", values = c(
+  "Tutuila"       = "#5b2a86",  
+  "Ofu-Olosega"   = "#2c7fb8", 
+  "Ta‘ū"          = "#41b6c4", 
+  "Rose Atoll"    = "#7fcdbb",  
+  "Swains Island" = "#f768a1"
+   )) 
+  })
+
+p1 <- plots[[1]]
+p2 <- plots[[2]]
+p3 <- plots[[3]]
+p4 <- plots[[4]]
+p5 <- plots[[5]]
+
+p_island <- p5 + p1 + p4 + p2 + p3 +
+   plot_layout(nrow = 2, axis_titles = "collect") +  
+   plot_annotation(tag_levels = "a", tag_suffix = ')', 
+  title = ""
+)
+
+info_island <- pred_island$info_region
+
+ggsave(p1, filename = "../figures/island_trend1.png",
+        width=6, height=5)
+ggsave(p2, filename = "../figures/island_trend2.png",
+        width=6, height=5)
+ggsave(p3, filename = "../figures/island_trend3.png",
+        width=6, height=5) 
+ggsave(p4, filename = "../figures/island_trend4.png",
+        width=6, height=5) 
+ggsave(p5, filename = "../figures/island_trend5.png",
+        width=6, height=5) 
+```
 
 ```{r}
 #| include: false
@@ -864,22 +980,14 @@ p_datano
 
 #### Regional NRM scale {.unnumbered}
 
-pred_NRM <- spatial_agg(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier.sf, "Tier4")
+pred_NRM <- spatial_agg(post_dist_df_tier5,  post_dist_df_all, tiers.lookup, tier.sf, "Tier4")
 
-# Define colors for Tier4 regions
-tier4_colors <- c(
-  "Wet Tropics"        = "#2C7FB8",
-  "Burdekin"           = "#E69F00",
-  "Mackay Whitsunday"  = "#1B9E77"
-)
 
 plots <- pred_NRM$pred_table %>%
   droplevels() %>%
   mutate(
     Tier4_NRM = case_when(
-      Tier4 == "1819" ~ "Wet Tropics",
-      Tier4 == "1808" ~ "Burdekin",
-      Tier4 == "1820" ~ "Mackay Whitsunday",
+      Tier4 == "1786" ~ "American Samoa",
       TRUE ~ NA_character_
     ),
     arrow_symbol = case_when(
@@ -894,7 +1002,7 @@ plots <- pred_NRM$pred_table %>%
     ggplot(.x) +
       geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100),
                   alpha = 0.2,
-                  fill = tier4_colors[.y]) +
+                  fill = "#9B2226") +
       geom_line(aes(x = Year, y = Median*100),
                 linewidth = 1.1,
                 colour = "#4D4D4D") +
@@ -920,102 +1028,33 @@ plots <- pred_NRM$pred_table %>%
       ) 
   })
 p4 <- plots[[1]]
-p5 <- plots[[2]]
-p6 <- plots[[3]]
 
-p_region <- p6 + p4 + p5 +
-   plot_layout(nrow = 2, axis_titles = "collect") +  
-   plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = ""
-)
 info_NRM <- pred_NRM$info_region
 
-ggsave(p4, filename = "../figures/NRM_trend1.png",
+ggsave(p4, filename = "../figures/ecoregion_trend.png",
         width=6, height=5)
-ggsave(p5, filename = "../figures/NRM_trend2.png",
-        width=6, height=5)
-ggsave(p6, filename = "../figures/NRM_trend3.png",
-        width=6, height=5)
+
 ```
+
+```{r, fig.width=8, fig.height=6}
+#| include: true
+#| echo: false
+#| eval: false
+#| label: fig-pred-island
+#| fig-cap: Estimated coral trends at the island-scale from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+p_island
+```
+
 
 ```{r, fig.width=8, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: false
 #| label: fig-pred-region
-#| fig-cap: Estimated coral trends at the NRM-scale from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
-p_region
+#| fig-cap: Estimated coral trends at the ecoregion-scale from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+p4
 ```
 
-
-```{r}
-#| include: false
-#| echo: false
-#| eval: false
-
-#### Central GBR scale {.unnumbered}
-
-pred_CGBR <- spatial_agg(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier.sf, "TierX")
-
-plot <- pred_CGBR$pred_table %>%
-  filter(Year > 2006) %>%
-  filter(Year < 2025) %>%
-  droplevels() %>%
-  mutate(
-    arrow_symbol = case_when(
-      Change == "Up"   ~ "↑",
-      Change == "Down" ~ "↓",
-      Change == "Flat" ~ "→",
-      TRUE ~ ""
-    )
-  ) %>%
-  split(.$TierX) %>%
-  imap(~{
-    ggplot(.x) +
-      geom_ribbon(aes(x = Year, ymin = Lower*100, ymax = Upper*100),
-                  alpha = 0.2,
-                  fill = "#9B2226") +
-      geom_line(aes(x = Year, y = Median*100),
-                linewidth = 1.1,
-                colour = "#4D4D4D") +
-      geom_text(
-        aes(x = Year,
-            y = Upper*100 + 3,
-            label = arrow_symbol),
-        size = 6
-      ) +
-      labs(
-        title = .y,
-        x = "Year",
-        y = "Coral cover (%)"
-      ) +
-    #  ylim(0, 80) +
-      theme_pubr() +
-      theme(
-        axis.text  = element_text(size = 13),
-        axis.title = element_text(size = 15),
-        plot.title = element_text(size = 16),
-        legend.position = "none"
-      )
-  })
-
-p7 <- plot[[1]]
-
-ggsave(p7, filename = "../figures/GBR_central_1.png",
-       width=6, height=5)
-
-info_GBR <- pred_CGBR$info_region
-```
-
-
-```{r, fig.width=8, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: false
-#| label: fig-pred-regionGBR
-#| fig-cap: Estimated coral trends at the south GBR-scale from 2006 to 2024. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
-p7
-```
 
 ```{r}
 #| include: false
@@ -1031,11 +1070,7 @@ coef_plots <- purrr::imap(mod_, function(mod, model_name) {
 coef_all <- imap_dfr(coef_plots, ~ .x %>%
                        mutate(region = .y)) %>%
                        mutate(region_name = sub("_.*", "", region)) %>%
-  mutate(neg_ci = if_else(effect_low < 0 & effect_high < 0, TRUE, FALSE),
-         y_pos = as.numeric(factor(param)) + as.numeric(factor(region_name)) / 10) 
-
-coef_all$region_name <- as.factor(coef_all$region_name)
-coef_all$region_name <- factor(coef_all$region_name, levels = c("Wet Tropics", "Burdekin", "Mackay Whitsunday"))
+  mutate(neg_ci = if_else(effect_low < 0 & effect_high < 0, TRUE, FALSE)) 
 
 # Reorder param by average effect_50 (most negative first)
 param_order <- coef_all %>%
@@ -1047,53 +1082,41 @@ param_order <- coef_all %>%
 coef_all <- coef_all %>%
   mutate(param = factor(param, levels = param_order))
 
-# dd neg_ci and y positions for plotting
-coef_all <- coef_all %>% 
-         mutate( neg_ci = effect_low < 0 & effect_high < 0, 
-         y_pos = as.numeric(factor(param)) + as.numeric(factor(region_name)) / 10 ) %>%
-         arrange(param) %>%
-  mutate(
-    y_pos = case_when(
-      round(y_pos %% 1, 1) == 0.1 ~ y_pos - 0.4,
-      round(y_pos %% 1, 1) == 0.2 ~ y_pos - 0.2,
-      TRUE ~ y_pos  
-    )
-  )
 
 # Prepare stripe data (one row per param x region_name)
 stripe_data <- coef_all %>%
-  distinct(param, region_name) %>%
-  arrange(param, region_name) %>%
+  distinct(param) %>%
+  arrange(param) %>%
   mutate(y = row_number()/3)
 
-
 g <- ggplot() +
-  ggforestplot::geom_stripes(data = stripe_data, aes(y = y), odd = "white", even = "gray90") +
-  geom_point(data = coef_all, aes(x = effect_50, y = y_pos, col = region_name), size = 2.3) +
-  geom_errorbar(data = coef_all, 
-                aes(xmin = effect_low, xmax = effect_high, y = y_pos, col = region_name), 
-                width = 0.1) +
-  geom_text(data = filter(coef_all, neg_ci),
-            aes(x = effect_low - 0.005, y = y_pos), 
-            label = "*", colour = "black", size = 4) +
-  theme_pubr() +
-  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4, colour = "black") +
-  scale_y_continuous(
-    breaks = 1:length(param_order),
-    labels = param_order
+  ggforestplot::geom_stripes(
+    data = stripe_data,
+    aes(y = param),
+    odd = "white", even = "gray90"
   ) +
-  scale_colour_manual("Region",
-                      values = c(
-                        "Wet Tropics" = "#2C7FB8",       
-                        "Burdekin" = "#E69F00",           
-                        "Mackay Whitsunday" = "#1B9E77"
-                      )
-  ) + 
+  geom_point(
+    data = coef_all,
+    aes(x = effect_50, y = param),
+    size = 2.3, col = "#9B2226"
+  ) +
+  geom_errorbar(
+    data = coef_all,
+    aes(xmin = effect_low, xmax = effect_high, y = param),
+    width = 0.1, col = "#9B2226"
+  ) +
+  geom_text(
+    data = filter(coef_all, neg_ci),
+    aes(x = effect_low - 0.005, y = param),
+    label = "*", colour = "black", size = 4
+  ) +
+  theme_pubr() +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
   theme(legend.position = "bottom") +
   labs(x = "Effect Size", y = "")
 
 g
- ggsave(g, filename = "../figures/GBR_effect_size.png",
+ ggsave(g, filename = "../figures/Dist_effect_size.png",
         width=7, height=6)
 ```
 
@@ -1104,37 +1127,15 @@ g
 
 all_plots <- imap(mod_, ~plot_conditional_time(.x, .y))
 
-plots <- all_plots[["Wet Tropics_1819"]] %>% 
-  keep(~ "p" %in% names(.x)) %>% 
-  map("p")
+plots <- all_plots %>%
+  map(~ map(.x, "p")) %>%
+  flatten()
 
-declines_WT <- map_dfr(all_plots[["Wet Tropics_1819"]],
+declines_ASM <- map_dfr(all_plots[["FRK_shallow"]],
                     ~ compute_decline(.x$cond_table),
                     .id = "disturbance") %>%
   mutate(across(contains("decline"), ~ .x * 100))
-all_plots_1 <- wrap_plots(plots, ncol = 3)
-
-plots <- all_plots[["Burdekin_1808"]] %>% 
-  keep(~ "p" %in% names(.x)) %>% 
-  map("p")
-
-declines_B <- map_dfr(all_plots[["Burdekin_1808"]],
-                    ~ compute_decline(.x$cond_table),
-                    .id = "disturbance") %>%
-  mutate(across(contains("decline"), ~ .x * 100))
-
-all_plots_2 <- wrap_plots(plots, ncol = 3)
-
-plots <- all_plots[["Mackay Whitsunday_1820"]] %>% 
-  keep(~ "p" %in% names(.x)) %>% 
-  map("p")
-
-declines_MW <- map_dfr(all_plots[["Mackay Whitsunday_1820"]],
-                    ~ compute_decline(.x$cond_table),
-                    .id = "disturbance") %>%
-  mutate(across(contains("decline"), ~ .x * 100))
-
-all_plots_3 <- wrap_plots(plots, ncol = 3)
+all_plots_1 <- wrap_plots(plots, ncol = 2)
 
 ```
 
@@ -1145,7 +1146,7 @@ all_plots_3 <- wrap_plots(plots, ncol = 3)
 
 
 # Conditional plots
-# Wet Tropics
+# American Samoa
 
 mod <- mod_[[1]]
 
@@ -1153,55 +1154,263 @@ mod_M <- mod$M
 BAUs <- mod$obj_frk$ST_BAUs
 obj_frk <- mod$obj_frk
 hexpred <- mod$HexPred_reefid2
-
+data_tier <- mod$data.grp.tier
 sf::sf_use_s2(FALSE)
 
 olddata <- mod_M@BAUs@data 
 N <- nrow(olddata)
+unique_hex_island <- plot_islands_custom_buffer(add_islands)$unique_hex_island
 
-# Plots preditions and uncertainty across years 
-pred <- predict_year(mod_M, olddata, hexpred, obj_frk, title_n = "", max_cover = 67)
+ newpred <- predict(mod_M, new_BAU_data = olddata)
+  
+  post_dist_df <- as.data.frame(newpred$MC$mu_samples) %>% 
+    mutate(fYEAR = obj_frk$ST_BAUs@data$fYEAR) %>%
+    mutate(Tier5 = obj_frk$ST_BAUs@data$Tier5) %>%
+    mutate(id_loc = row_number()) %>%
+    tidyr::pivot_longer(!c(fYEAR, Tier5, id_loc),
+                        names_to = "draw", 
+                        values_to = "pred")    
+  
+  # Spatial maps 
+  hexpred$Tier5 <- as.factor(hexpred$Tier5)
+  
+  pred_sum_sf <- post_dist_df %>% 
+    group_by(fYEAR, Tier5) %>% 
+    median_hdci(pred) %>%
+    inner_join(hexpred %>% 
+                 group_by(Tier5) %>% 
+                 summarize() %>% 
+                 dplyr::select(geometry, Tier5)) %>% 
+    st_as_sf(sf_column_name = "geometry") %>%
+    mutate(Unc = .upper - .lower,
+           tier_fYEAR = paste0(Tier5, fYEAR)) %>%
+    dplyr::select(fYEAR, Tier5, pred, .lower, .upper, Unc, tier_fYEAR) %>%
+  left_join(
+    unique_hex_island %>% st_drop_geometry(),
+    by = "Tier5"
+  )
+  
+  # palettes
+  pal_pred <- LaCroixColoR::lacroix_palette("Pamplemousse", n = 100, type = "continuous")
+  pal_unc  <- wesanderson::wes_palette("Zissou1", 100, type = "continuous")
+  
+  # ---- split by island ----
+  plots <- pred_sum_sf %>%
+    split(.$NAME) %>%
+    purrr::imap(function(df_island, island_name) {
+      
+      # prediction plot
+      p <- ggplot() + 
+        geom_sf(data = df_island, aes(fill = pred * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_pred,
+          name = "Coral Cover (%)",
+          limits = c(0, 70)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = "",
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
+          axis.text.x = element_text(size = 9, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 9),
+          axis.title = element_text(size = 12)
+        )
+      
+      # uncertainty plot
+      p_unc <- ggplot() + 
+        geom_sf(data = df_island, aes(fill = Unc * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_unc,
+          name = "Uncertainty range (%)",
+          limits = c(0, 70)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = "",
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
+          axis.text.x = element_text(size = 9, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 9),
+          axis.title = element_text(size = 12) 
+        ) 
+      list(p = p, p_unc = p_unc)
+    })
 
-p_pred_WT <- pred$p
-p_unc_WT <- pred$p_unc
+p_Tutuila <- plots$Tutuila$p + plots$Tutuila$p_unc  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "",
+    theme = theme(
+      plot.title = element_text(size = 20)))
 
-ggsave(p_pred_WT, filename = "../figures/Predictions_WetTropics.png",
-         width=12, height=14)
-ggsave(p_unc_WT, filename = "../figures/Predictions_UNC_WetTropics.png",
-         width=12, height=14)
+p_OO <- plots$`Ofu-Olosega`$p + plots$`Ofu-Olosega`$p_unc  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "",
+    theme = theme(
+      plot.title = element_text(size = 20)))
 
-################## Heat stress
+p_RA <- plots$`Rose Atoll`$p + plots$`Rose Atoll`$p_unc  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "",
+    theme = theme(
+      plot.title = element_text(size = 20)))
+
+p_SI <- plots$`Swains Island`$p + plots$`Swains Island`$p_unc  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "",
+    theme = theme(
+      plot.title = element_text(size = 20)))
+
+p_T <- plots[[4]]$p + plots[[4]]$p_unc  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "",
+    theme = theme(
+      plot.title = element_text(size = 20)))
+
+## Plot for the paper 
+plots_tul <- pred_sum_sf %>%
+    filter(NAME == "Tutuila") 
+
+p_tul <- ggplot() + 
+        geom_sf(data = plots_tul, aes(fill = pred * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_pred,
+          name = "Coral Cover (%)",
+          limits = c(0, 70)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = "",
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
+          axis.text.x = element_text(size = 9, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 9),
+          axis.title = element_text(size = 12)
+        )  +
+  scale_y_continuous(
+    breaks = c(-14.26, -14.32, -14.38),
+    labels = c("14.26°S", "14.32°S", "14.38°S")
+  ) +
+  scale_x_continuous(
+    breaks = c(-170.80, -170.70, -170.60),
+    labels = c("170.80°W","170.70°W", "170.60°W"))
+      
+# uncertainty plot
+p_unc_tul <- ggplot() + 
+        geom_sf(data = plots_tul, aes(fill = Unc * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_unc,
+          name = "Uncertainty range (%)",
+          limits = c(0, 70)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = "",
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
+          axis.text.x = element_text(size = 9, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 9),
+          axis.title = element_text(size = 12) 
+        )  +
+  scale_y_continuous(
+    breaks = c(-14.26, -14.32, -14.38),
+    labels = c("14.26°S", "14.32°S", "14.38°S")
+  ) +
+  scale_x_continuous(
+    breaks = c(-170.80, -170.70, -170.60),
+    labels = c("170.80°W","170.70°W", "170.60°W"))
+
+p_Tutuila_paper <- p_tul + p_unc_tul  +
+  plot_layout(nrow = 2, axis_titles = "collect") +  
+  plot_annotation(
+    tag_levels = "a", 
+    tag_suffix = ')', 
+    title = "Tutuila",
+    theme = theme(
+      plot.title = element_text(size = 20)))
+
+ggsave(p_Tutuila_paper, filename = "../figures/Predictions_Tutuila.png",
+         width=6, height=10)
+
+################## Cyclone exposure
 # ## Low 
 new_BAU_data <- olddata %>%
   mutate(max_cyc      = rnorm(N, 0, 0.001),
-         max_cyc.lag1 = rnorm(N, 0, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 0, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
+         max_dhw      = rnorm(N, 0, 0.001)) 
 
-p_dhw_low <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "0 DHWs", max_cover = 60)
+p_cyc_low <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "0 Hours", max_cover = 42)
 
-ggsave(p_dhw_low[[1]], filename = "../figures/Low_HeatStress_WetTropics.png",
+ggsave(p_cyc_low[[1]], filename = "../figures/Low_Cyclone_ASM.png",
          width=7, height=6)
 
 
 # High 
 new_BAU_data <- olddata %>%
-  mutate(max_cyc      = rnorm(N, 0, 0.001),
-         max_cyc.lag1 = rnorm(N, 0, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 12, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
+  mutate(max_cyc      = rnorm(N, 15, 0.001),
+         max_dhw      = rnorm(N, 0, 0.001)) 
 
-p_dhw_high <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "12 DHWs", max_cover = 60)
+p_cyc_high <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "15 Hours", max_cover = 42)
 
-ggsave(p_dhw_high[[1]], filename = "../figures/High_HeatStress_WetTropics.png",
+ggsave(p_cyc_high[[1]], filename = "../figures/High_Cyclone_ASM.png",
          width=7, height=6)
 
 
-combined_plot_WetTropics <- p_dhw_low[[1]] +  p_dhw_high[[1]] + guide_area() +
+combined_plot_ASM <- p_cyc_low[[1]] + p_cyc_high[[1]] + guide_area() +
    plot_layout(
     nrow = 2,
     guides = "collect",
@@ -1209,339 +1418,120 @@ combined_plot_WetTropics <- p_dhw_low[[1]] +  p_dhw_high[[1]] + guide_area() +
     heights = c(1, 0.15)  
   )  +  
    plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Wet Tropics"
-)
-
-# Burkedin
-mod <- mod_[[2]]
-
-mod_M <- mod$M
-BAUs <- mod$obj_frk$ST_BAUs
-obj_frk <- mod$obj_frk
-hexpred <- mod$HexPred_reefid2
-
-sf::sf_use_s2(FALSE)
-
-olddata <- mod_M@BAUs@data 
-N <- nrow(olddata)
-
-
-# Plots preditions and uncertainty across years 
-pred <- predict_year(mod_M, olddata, hexpred, obj_frk, title_n = "", max_cover = 81)
-
-p_pred_B <- pred$p
-p_unc_B <- pred$p_unc
-
-ggsave(p_pred_B, filename = "../figures/Predictions_Burkedin.png",
-         width=12, height=14)
-ggsave(p_unc_B, filename = "../figures/Predictions_UNC_Burkedin.png",
-         width=12, height=14)
-
-# Low
-new_BAU_data <- olddata %>%
-  mutate(max_cyc      = rnorm(N, 0, 0.001),
-         max_cyc.lag1 = rnorm(N, 0, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 0, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
-
-p_cycl1_low <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "0 hours", max_cover = 55)
-
-ggsave(p_cycl1_low[[1]], filename = "../figures/Low_CycL_Burkedin.png",
-         width=7, height=6)
-
-# High
-new_BAU_data <- olddata %>%
-  mutate(max_cyc      = rnorm(N, 0, 0.001),
-         max_cyc.lag1 = rnorm(N, 30, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 0, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
-
-p_cycl1_high <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "30 hours", max_cover = 55)
-
-ggsave(p_cycl1_high[[1]], filename = "../figures/High_CycL_Burkedin.png",
-         width=7, height=6)
-
-
-combined_plot_Burkedin <- p_cycl1_low[[1]] + p_cycl1_high[[1]] + guide_area() +
-  plot_layout(
-    nrow = 2,
-    guides = "collect",
-    axis_titles = "collect",
-    heights = c(1, 0.15)  
-  ) +
-  plot_annotation(
-    tag_levels = "a",
-    tag_suffix = ')',
-    title = "Burkedin"
-  )
-
-
-# Mackay
-mod <- mod_[[3]]
-
-mod_M <- mod$M
-BAUs <- mod$obj_frk$ST_BAUs
-obj_frk <- mod$obj_frk
-hexpred <- mod$HexPred_reefid2
-
-sf::sf_use_s2(FALSE)
-
-olddata <- mod_M@BAUs@data 
-N <- nrow(olddata)
-
-# Plots preditions and uncertainty across years 
-pred <- predict_year(mod_M, olddata, hexpred, obj_frk, title_n = "", max_cover = 99)
-
-p_pred_M <- pred$p
-p_unc_M <- pred$p_unc
-
-ggsave(p_pred_M, filename = "../figures/Predictions_Mackay.png",
-         width=12, height=14)
-ggsave(p_unc_M, filename = "../figures/Predictions_UNC_Mackay.png",
-         width=12, height=14)
-
-# Low
-new_BAU_data <- olddata %>%
-  mutate(max_cyc      = rnorm(N, 0, 0.001),
-         max_cyc.lag1 = rnorm(N, 0, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 0, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
-
-p_cyc_low <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "0 hours", max_cover = 67)
-
-ggsave(p_cyc_low[[1]], filename = "../figures/Low_Cyc_Mackay.png",
-        width=7, height=6)
-
-# High
-new_BAU_data <- olddata %>%
-  mutate(max_cyc      = rnorm(N, 55, 0.001),
-         max_cyc.lag1 = rnorm(N, 0, 0.001),
-         max_cyc.lag2 = rnorm(N, 0, 0.001),
-         max_dhw      = rnorm(N, 0, 0.001),
-         max_dhw.lag1 = rnorm(N, 0, 0.001),
-         max_dhw.lag2 = rnorm(N, 0, 0.001)) 
-
-p_cyc_high <- predict_newdata(mod_M, new_BAU_data, hexpred, obj_frk, title_n = "55 hours", max_cover = 67)
-
-ggsave(p_cyc_high[[1]], filename = "../figures/High_Cyc_Mackay.png",
-       width=7, height=6)
-
-
-combined_plot_Mackay <- p_cyc_low[[1]] +  p_cyc_high[[1]] + guide_area() +
-   plot_layout(
-    nrow = 2,
-    guides = "collect",
-    axis_titles = "collect",
-    heights = c(1, 0.15)  
-  )  +  
-   plot_annotation(tag_levels = "a", tag_suffix = ')', 
-  title = "Mackay Whitsunday"
+  title = "American Samoa"
 )
 
 ### Compute differences 
 
 # Wet Tropics 
 
-pred_low <- p_dhw_low[[2]]
-pred_high <- p_dhw_high[[2]]
-
-p_WT <- plot_diff(pred_high, pred_low, title_n = "Wet Tropics")
-ggsave(p_WT, filename = "../figures/WetTropics_diff.png",
-         width=7, height=6)
-
-# Burkedin
-
-pred_low <- p_cycl1_low[[2]]
-pred_high <- p_cycl1_high[[2]]
-
-p_B <- plot_diff(pred_high, pred_low, title_n = "Burkedin")
- ggsave(p_B, filename = "../figures/Burkedin_diff.png",
-         width=7, height=6)
-
-#Mackay
-
 pred_low <- p_cyc_low[[2]]
 pred_high <- p_cyc_high[[2]]
 
-p_MW <- plot_diff(pred_high, pred_low, title_n = "Mackay Whitsunday")
-ggsave(p_MW, filename = "../figures/Mackay_diff.png",
+p_diff_ASM <- plot_diff(pred_high, pred_low, title_n = "American Samoa")
+ggsave(p_diff_ASM , filename = "../figures/ASM_diff.png",
          width=7, height=6)
 ```
 
 ### Model predictions {.unnumbered}
 
-#### Wet Tropics
+#### Tutuila
 
-At the local scale, predicted coral cover ranged from 2.7% [0.5–7.1%, 95% predictive intervals] for one tier in 2024 to 67% [57.5–75.3%] in 2013 (@fig-pred-1). Between 2006 and 2012, predicted coral cover was generally lower in the southern section of the Wet Tropics region. However, the coral cover increased in these locations between 2013 and 2016. The impact of the 2017 heat stress event is evident in these locations, with consistently lower predicted coral cover from 2018 to 2024. Coral cover values show a region-wide recovery in 2023 and 2024, although some locations in the western part exhibited high predicted values across the entire surveyed years. The spatio-temporal patterns of uncertainty reveal lower uncertainty at and near data-tier locations, with increasing uncertainty in areas farther from these sites, consistent throughout the years (@fig-pred-unc-1). Additionally, uncertainty generally increased across the region in 2023 and 2024.
-
-
-```{r, fig.width=14, fig.height=18}
+```{r, fig.width=8, fig.height=12}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-pred-1
-#| fig-cap:  Predicted coral cover values across the Wet Tropics for each year between 2006-2024. Values correspond to the posterior means.   
-p_pred_WT 
+#| fig-cap:  a) Predicted coral cover values across Tutuila island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.   
+p_Tutuila
 ```
 
-```{r, fig.width=14, fig.height=18}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-pred-unc-1
-#| fig-cap:  Uncertainty associated with predictions across the Wet Tropics for each year between 2006-2024. Values correspond to the posterior credible intervals.   
-p_unc_WT 
-```
 
-#### Burkedin
+#### Ofu-Olosega
 
-In Burdekin, a clear north–south gradient in coral cover was observed from 2007 to 2014, with higher values in the southern part of the region (@fig-pred-2). Regional recovery occurred through 2015 and 2018, followed by a broad decline in 2019 potentially influenced by the 2018 cyclone and recovery in 2020. Then patchy declines in coral cover were predicted across the region up to 2024. Uncertainty remained high in the southern sector throughout most years, decreasing by 2024 (@fig-pred-unc-2).
-
-```{r, fig.width=14, fig.height=18}
+```{r, fig.width=12, fig.height=12}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-pred-2
-#| fig-cap:  Predicted coral cover values across Burkedin for each year between 2007-2024. Values correspond to the posterior means.   
-p_pred_B
+#| fig-cap:  a) Predicted coral cover values across Ofu-Olosega island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.    
+p_OO
 ```
 
-```{r, fig.width=14, fig.height=18}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-pred-unc-2
-#| fig-cap:  Uncertainty associated with predictions across Burkedin for each year between 2007-2024. Values correspond to the posterior credible intervals.   
-p_unc_B 
-```
+#### Ta‘ū
 
-#### Mackay Whitsunday
-
-Model predictions were relatively homogeneous across the Mackay region from 2007 to 2014. From 2015 to 2018, increases in coral cover were predicted primarily in the northern and eastern parts of the region (@fig-pred-3). Uncertainty remained low to moderate until 2016, with lower values at observed data locations and nearby areas. From 2017 onward, uncertainty increased across most of the region, except at data locations where it remained low (@fig-pred-unc-3). 
-
-```{r, fig.width=14, fig.height=18}
+```{r, fig.width=12, fig.height=12}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-pred-3
-#| fig-cap:  Predicted coral cover values across Mackay Whitsunday for each year between 2007-2024. Values correspond to the posterior means.   
-p_pred_M
+#| fig-cap:  a) Predicted coral cover values across Ta‘ū island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.    
+p_T 
 ```
 
-```{r, fig.width=14, fig.height=18}
+#### Rose Atoll
+
+```{r, fig.width=12, fig.height=12}
 #| include: true
 #| echo: false
 #| eval: true
-#| label: fig-pred-unc-3
-#| fig-cap:  Uncertainty associated with predictions across Mackay Whitsunday for each year between 2007-2024. Values correspond to the posterior credible intervals.   
-p_unc_M
+#| label: fig-pred-4
+#| fig-cap:  a) Predicted coral cover values across Rose Atoll and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.   
+p_RA  
 ```
 
-### Attribution of Disturbances {.unnumbered}
+#### Swains Island
 
-#### Wet Tropics
+```{r, fig.width=12, fig.height=12}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-pred-5
+#| fig-cap:  a) Predicted coral cover values across Swains Island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means. 
+p_SI 
+```
 
-In the Wet Tropics, cyclone exposure at lag0 and lag1, as well as heat stress across all time lags showed significant negative regional effects, with 95% prediction intervals not overlapping zero. The largest absolute decline between the minimum and maximum observed disturbance levels was associated with cyclone exposure at lag1, corresponding to a 37.6% reduction in coral cover (95% prediction interval: −41.0% to −3.1%, @fig-cond-all-1). Heat stress was associated with a 18.3% decline (95% prediction interval: −23.3% to −11.5%), with the magnitude of decline decreasing with increasing lag: 15.1% at lag 1 (−20.7% to −7.0%) and 7.4% at lag 2 (−11.6% to −0.5%).
+### Association with Disturbances {.unnumbered}
 
-Spatially, increasing magnitude of DHW alone (i.e., excluding other disturbances and time-lag effects) contributed to regional declines in coral cover (@combined_plot_WetTropics), with absolute losses estimated to range from 3.5% to 10.9%, and a regional average decline of 7.0% (@fig-cond-space-change-1).  
+In American Samoa, cyclone exposure was significantly negatively associated with regional coral cover, with 95% prediction intervals not overlapping zero (@fig-cond-dist-1). The absolute decline between the minimum and maximum observed cyclone exposure, corresponds to a 16.1% reduction in coral cover (95% prediction interval: −27.8% to -1.2%, @fig-cond-all-1). 
+
+Spatially, increasing magnitude of cyclone exposure alone (i.e., excluding heat stress) contributed to regional declines in coral cover (@fig-cond-space-1), with absolute losses estimated to range from 4.1% to 27.0%, and a regional average decline of 15.8% (@fig-cond-space-change-1).  
+
+```{r, fig.width=5, fig.height=4}
+#| include: true
+#| echo: false
+#| eval: true
+#| label: fig-cond-dist-1
+#| fig-cap: Predicted effect sizes of disturbances. The dots represent the predicted averaged effect and the intervals represent the corresponding 95\% predictive intervals. Stars show significant effect sizes when values of predictive intervals are entirely negatives. 
+g
+```
+
 
 ```{r, fig.width=10, fig.height=6}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-all-1
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Wet Tropics. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
+#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in American Samoa. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
 all_plots_1
 ```
 
-```{r, fig.width=8, fig.height=6}
+```{r, fig.width=10, fig.height=8}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-space-1
-#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of heat stress across the Wet Tropics. 
-combined_plot_WetTropics
+#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of cyclone exposure. 
+combined_plot_ASM 
 ```
 
-```{r, fig.width=6, fig.height=5}
+```{r, fig.width=8, fig.height=7}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-cond-space-change-1
-#| fig-cap: Associated relative changes of coral cover between low and high levels of heat stress across the Wet Tropics.
-p_WT
-```
-
-#### Burkedin
-
-In the Burkedin region, a significant negative effect was detected only for cyclone exposure at lag 1. This disturbance was associated with a large regional decline, with coral cover predicted to decrease by 42.6% between the minimum and maximum observed cyclone exposure values (95% prediction interval: −43.3% to −33.3%, @fig-cond-all-2).
-
-Increasing exposure to cyclonic waves from 0 to 30 hours (@fig-cond-space-2) was associated with varying degrees of coral cover decline across the region, ranging from 3.2% to 24.3%, with an average decline of 13.6%. Most regional estimates (75% percentile) fell between 11.9% and 24.3%, indicating that the majority of areas experienced moderate to large declines (@fig-cond-space-change-2).  
-
-```{r, fig.width=10, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-all-2
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Burkedin. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
-all_plots_2
-```
-
-
-```{r, fig.width=8, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-space-2
-#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of cyclone exposure at lag1 across Burkedin. 
-combined_plot_Burkedin
-```
-
-```{r, fig.width=6, fig.height=5}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-space-change-2
-#| fig-cap: Associated relative changes of coral cover between low and high levels of cyclone exposure at lag1 across Burkedin.
-p_B
-```
-
-#### Mackay Whitsunday
-
-In the Mackay Whitsunday region, cyclone exposure showed significant negative regional effects across all time lags, while heat stress was significant only at lag 1. The largest absolute decline between the minimum and maximum observed cyclone exposure levels was estimated at 43.8% at lag 0 (95% prediction interval: −40.1% to −37.6%), followed by 42.1% at lag 2 (−39.3% to −29.0%) and 35.1% at lag 1 (−36.9% to −16.3%, @fig-cond-all-3). Heat stress at lag 1 was associated with a smaller decline of 11.0%, although with substantial uncertainty (95% prediction interval: −18.9% to -1.5%).
-
-Comparing predictions under no cyclonic wave exposure at lag 1 with those under high exposure across space (@combined_plot_Mackay) revealed stronger declines in the northern section of the region (@fig-cond-space-change-3), with coral cover losses reaching up to 19.9% and a regional average decline of 11.2%.  
-
-```{r, fig.width=10, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-all-3
-#| fig-cap: Attribution of disturbances. The panels display the predicted coral cover across the range of disturbance values, from the minimum to the maximum values observed in Mackay Whitsunday. Note that values of Heat Stress are expressed in Degree Heating Weeks and Cyclone Exposure in hours. The lines correspond to the averaged predicted values and shaded areas their associated 95 % prediction intervals. Effects have been calculated at the mean values of all the other covariates.   
-all_plots_3
-```
-
-```{r, fig.width=8, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-space-3
-#| fig-cap: Spatial predictions of coral cover under fixed low and high levels of cyclone exposure across Mackay Whitsunday. 
-combined_plot_Mackay
-```
-```{r, fig.width=6, fig.height=5}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-cond-space-change-3
-#| fig-cap: Associated relative changes of coral cover between low and high levels of cyclone exposure across Mackay Whitsunday.
-p_MW
+#| fig-cap: Associated relative changes of coral cover between low and high levels of cyclone exposure.
+p_diff_ASM
 ```
 
 ### Model validation {.unnumbered}
@@ -1564,7 +1554,7 @@ combined_plot_fit <- wrap_plots(plots, ncol = 1) +
 ggsave(combined_plot_fit, filename = "../figures/models_fit.png",
         width=6, height=8)
 ```
-```{r, fig.width=6, fig.height=8}
+```{r, fig.width=6, fig.height=6}
 #| label: r-squared
 #| eval: true
 #| echo: false
@@ -1580,18 +1570,9 @@ combined_plot_fit
 #| eval: true
 
 res_list <- imap(mod_, ~ make_FRK_dharma_res(.x))
-res1 <- gg_dharma(res_list[[1]], "") + ggtitle("Wet Tropics") +
+res1 <- gg_dharma(res_list[[1]], "") + ggtitle("") +
     theme(plot.title = element_text(size = 10))
-res2 <- gg_dharma(res_list[[2]], "") + ggtitle("Burdekin") +
-    theme(plot.title = element_text(size = 10))
-res3 <- gg_dharma(res_list[[3]], "") + ggtitle("Mackay Whitsunday") +
-    theme(plot.title = element_text(size = 10))
-
-res_all <- (res1 | res2 | res3) +  
-  plot_layout(guides = "collect", axis_titles = "collect") +  
-  plot_annotation(tag_levels = "a", tag_suffix = ')')
-
-ggsave(res_all, filename = "../figures/models_res.png",
+ggsave(res1, filename = "../figures/model_res.png",
         width=8, height=6)
 ```
 
@@ -1599,113 +1580,6 @@ ggsave(res_all, filename = "../figures/models_res.png",
 #| label: mod-res
 #| eval: true
 #| echo: false
-#| fig-cap: QQ plot residuals diagnostics.     
-res_all
+#| fig-cap: QQ plot residuals diagnostic.     
+res1
 ``` 
-
-#### Leave-out-data analysis {.unnumbered}
-This analysis was performed on the Wet Tropics region only. 
-
-The leave-out data approach is used to evaluate the influence of specific observations using prediction-performance measures. The full model is fitted on a train dataset composed of a random sample of observations and prediction-performance measures are computed on the leave-out observations.   
-
-We found that the predictive performance of the spatio-temporal model is more sensitive to the number of monitoring locations, with accuracy declining when sites or reefs are removed from the dataset (@fig-p_perf). In contrast, model performance is less affected by the number of replicated years.
-
-Five validation tests are developed: 
-
-* 1. rm(20% obs): 20% of data were randomly removed without structure.
-* 2. rm(20% reef): 20% of reefs were randomly removed.
-* 3. rm(20% site): 20% of sites were randomly removed.
-* 4. rm(20% transect):  20% of transects were randomly removed.
-* 5. rm(3YRS): 3 years of observations were removed within each location (locations with less than 4 years of data were not used). 
-
-Four predictive measures are used: 
-
-* 95% coverage interval (CvgErr): evaluates how often predictions include true observations, with the goal of capturing the true values 95% of the time. It is estimated as follows: 
-
-$$
-\text{CvgErr}(z, \ell, u) \;=\; 
-\left| 0.95 \;-\; \frac{1}{n} \sum_{i=1}^{n} \mathbf{1}\!\left( \ell_i < z_i < u_i \right) \right|
-$$
-
-where $z = \{z_1, z_2, \dots, z_n\}$ are the coral cover observations, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $\mathbf{1}(\cdot)$ is the indicator function (1 if the condition is true, 0 otherwise).
-
-* 95% interval score (IS): rewards prediction intervals that include the true observations (accuracy) and penalizes those that are too narrow or too wide (precision). It is computed as follow: 
-
-$$
-\text{IS}_{95} \;=\; \frac{1}{n} \sum_{i=1}^{n} 
-\Bigg[
-(u_i - \ell_i)
-+ \frac{2}{\alpha} (\ell_i - y_i)\,\mathbf{1}(y_i < \ell_i)
-+ \frac{2}{\alpha} (y_i - u_i)\,\mathbf{1}(y_i > u_i)
-\Bigg]
-$$
-
-where $\alpha = 0.05$, $\ell$ and $u$ are the lower and upper bounds of the predictive intervals, $n$ the total number of predictions, and $y$ are observed coral cover. 
-
-* Root-mean-squared prediction error (RMSPE) - how far off model predictions are from true observations without considering for uncertainty.
-
-$$
-\text{RMSPE} \;=\; \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 }
-$$
-
-where $y$ and $\hat{y}$ are the observed and predicted coral cover values, respectively, and $n$ the total number of observations. 
-
-* Continuous Ranked Probability Score (CRPS) - represents the quality of the predictions over the entire predictive probability distribution penalizing predictions that are inaccurate, imprecise or overconfident.  
-
-$$
-\text{CRPS}(F, y) \;=\; \sigma \left[ 
-z \left( 2 \Phi(z) - 1 \right) \;+\; 2 \,\phi(z) \;-\; \frac{1}{\sqrt{\pi}}
-\right],
-\quad z = \frac{y - \mu}{\sigma}
-$$
-
-where $y$ is the observed coral cover values, $\mu$ and $\sigma$ are the mean and the standard deviation of the predictive normal distribution, $\phi(.)$ represented the standard normal probability density function and $\Phi$ the cumulative distribution function. 
-
-These predictive measures give a single number with low scores representing better performances. 
-
-```{r, fig.width=5.5, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-p_perf
-#| fig-cap: Metrics of model predictive performance by tests. Each axis represents one of the evaluation metrics described above. The length of each arm represents the model predictive performance on that metric for a given test, with values scaled from 1 (poor) to 0 (best). Overall, better predictive performances of the models are indicated by smaller polygons. 
-print_attr_plots(appendix_dir, "viz_pperf")
-```
-
-#### Basis function exploratory analysis
-The aim of this analysis is to explore the influence of the basis function formulation with a focus on the temporal dimension. To do this, we compare four model performance using different number of basis functions in the temporal basis function: 
-
-* Full: number and location of temporal basis functions automatically estimated from the FRK function and adopted by ReefCloud.
-* 5: five temporal basis functions randomly selected from the FRK auto basis function. 
-* 3: three temporal basis functions randomly selected from the FRK auto basis function. 
-* 1: one temporal basis function randomly selected from the FRK auto basis function. 
-
-We found that the estimation of regional trends (@fig-bf-region) is more strongly influenced by the number of temporal basis functions, whereas the attribution of coral loss (@fig-bf-dist) is less affected.
-
-
-```{r, fig.width=6, fig.height=5}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-bf-temp
-#| fig-cap: Locations of the basis functions for each model with a) Default, b) 5, c) 3 and d) 1. 
-print_attr_plots(appendix_dir, "viz_basisfunction")
-```
-
-```{r, fig.width=8, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-bf-region
-#| fig-cap: Regional trends predicted by the spatio-temporal models. Solid lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
-print_attr_plots(appendix_dir, "basisfunction_tier4")
-```
-
-```{r, fig.width=8, fig.height=6}
-#| include: true
-#| echo: false
-#| eval: true
-#| label: fig-bf-dist
-#| fig-cap: Estimated effect sizes of disturbance effects. The points represent the estimated effect and the intervals represent the corresponding 95% confidence intervals.  
-print_attr_plots(appendix_dir, "basisfunction_coef")
-```

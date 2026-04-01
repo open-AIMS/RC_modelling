@@ -5,9 +5,16 @@
 mid_quant_75 <- function(y){
   y <- as.numeric(as.character(y))
   y <- y[!is.na(y)]
-  ymid <- Qtools::midquantile(y, probs = 3/4)
-    return(ymid$y)
+  
+  # Case 1: all zeros → return 0
+  if (length(y) == 0 || all(y == 0)) {
+    return(0)
   }
+  
+  # Case 2: otherwise compute mid-quantile
+  ymid <- Qtools::midquantile(y, probs = 3/4)
+  return(ymid$y)
+}
 
 select_covariates <- function(x) {
 
@@ -40,7 +47,13 @@ select_lowest_lag <- function(var1, var2, group1, group2) {
   
 filter_non_collinear <- function(df, vars, threshold = 0.7) {
   
-  m_coll <- cor(df[vars], use = "pairwise.complete.obs")
+  vars_valid <- vars[
+  sapply(df[vars], function(x) {
+    x <- x[complete.cases(df[vars])]
+    sd(x, na.rm = TRUE) > 0
+  })
+]
+  m_coll <- cor(df[vars_valid], use = "pairwise.complete.obs")
   
   corr_long <- as.data.frame(as.table(m_coll)) %>%
     filter(Var1 != Var2) %>%
@@ -52,7 +65,7 @@ filter_non_collinear <- function(df, vars, threshold = 0.7) {
       TRUE ~ "other"
     ))
 
-  if(nrow(corr_long) == 0) return(vars)
+  if(nrow(corr_long) == 0) return( vars_valid)
   
   corr_long <- corr_long %>%
     rowwise() %>%
@@ -260,17 +273,17 @@ data_viz <- function(dat, title_n){
     summarize(mean_cover = mean(COUNT/TOTAL) * 100, .groups = "drop") %>%
     arrange(Tier5, fYEAR)
 
-  pal_hov <- viridisLite::plasma(100, begin = 0, end = .85)
+  pal_hov <- viridisLite::plasma(100, begin = 0, end = .70)
 
   hov_plot <- ggplot(dat_hov,
                      aes(x = as.numeric(as.character(fYEAR)),
                          y = Tier5,
                          fill = mean_cover)) +
-    geom_tile() +
+    geom_tile(width = 1, height = 1) +
     scale_fill_gradientn(
       colours = pal_hov,
       name = "Coral cover (%)",
-      limits = c(0, 85)
+      limits = c(0, 70)
     ) +
     theme_minimal() +
     labs(x = "Year", y = "Data-tiers") +
@@ -285,7 +298,7 @@ data_viz <- function(dat, title_n){
       legend.key.width = unit(2, "cm"),
       legend.key.height = unit(0.5, "cm")
     ) +
-    scale_x_continuous(breaks = seq(2006, 2024, by = 2))
+    scale_x_continuous(breaks = seq(2015, 2023, by = 2))
 
   return(hov_plot)
 }
@@ -378,6 +391,97 @@ make_disturbance_plot <- function(mod, var, dist_label, fill_name, palette_name,
       legend.position = "bottom",
       panel.spacing = unit(0.9, "lines")
     )
+}
+
+#############################################
+######### Plot islands
+#############################################
+
+plot_islands_custom_buffer <- function(add_islands) {
+  
+  # # Compute bounding boxes with individual buffers
+  island_bboxes <- add_islands %>%
+    rowwise() %>%
+    mutate(
+      xmin = lon - buffer_deg,
+      xmax = lon + buffer_deg,
+      ymin = lat - buffer_deg,
+      ymax = lat + buffer_deg
+    ) %>%
+    select(NAME, xmin, xmax, ymin, ymax, buffer_deg)
+  
+  island_bboxes_sf <- add_islands %>%
+  rowwise() %>%
+  mutate(
+    xmin = lon - buffer_deg,
+    xmax = lon + buffer_deg,
+    ymin = lat - buffer_deg,
+    ymax = lat + buffer_deg,
+    geometry = st_as_sfc(st_bbox(c(
+      xmin = xmin, xmax = xmax,
+      ymin = ymin, ymax = ymax
+    ), crs = 4326))
+  ) %>%
+  st_as_sf() %>%
+  select(NAME)
+
+  unique_hex_island <- st_join(
+  unique_hex,
+  island_bboxes_sf,
+  join = st_intersects,
+  left = FALSE   # keep only hexes inside islands
+   )
+
+  # Generate plots
+  plots <- lapply(1:nrow(island_bboxes), function(i) {
+    
+    island <- island_bboxes[i, ]
+    
+    ggplot() +
+      geom_sf(data = asm_crop,
+              fill = "grey95",
+              colour = "black",
+              linewidth = 0.6) +
+      geom_sf(data = tier.sf.joined,
+              fill = NA,
+              colour = "black",
+              alpha = 0.2) +
+      geom_sf(data = unique_hex_island,
+              aes(fill = NAME),
+              alpha = 0.8,
+              linewidth = 0.05) +
+      geom_point(data = tier4_south_showed,
+                 aes(x = lon, y = lat),
+                 shape = 21, fill = "red", colour = "black", size = 1.5, alpha = 0.6) +
+      coord_sf(xlim = c(island$xmin, island$xmax),
+               ylim = c(island$ymin, island$ymax)) +
+      ggpubr::theme_pubr() +
+      labs(
+        title = island$NAME,
+        x = "Longitude",
+        y = "Latitude"
+      ) +
+      annotation_scale(
+        location = "bl",
+        width_hint = 0.3
+      ) +
+      theme(
+        axis.text  = element_text(size = 10, angle = 45, hjust = 1),
+        axis.title = element_text(size = 15),
+        plot.title = element_text(size = 16),
+        legend.position = "none"
+      ) +
+      scale_fill_manual(values = c(
+  "Tutuila"       = "#5b2a86",  
+  "Ofu-Olosega"   = "#2c7fb8",  
+  "Ta‘ū"          = "#41b6c4",  
+  "Rose Atoll"    = "#7fcdbb",  
+  "Swains Island" = "#f768a1"
+))
+  })
+  
+  names(plots) <- island_bboxes$NAME
+  return(list(plots = plots, island_bboxes_sf = island_bboxes_sf, unique_hex_island = unique_hex_island))
 }
 
 #############################################
@@ -529,15 +633,17 @@ spatial_agg_prep <- function() {
 
       for (i in seq_along(data.list)) {
         GROUP <- "HARD CORAL"
-        tier <- stringr::str_extract(files[i], "(?<=_)(\\d+)(?=.RData)")
-        obj <- readRDS(files[i])
+        tier <- stringr::str_extract(files[i], "(?<=FRK_).*?(?=\\.RData)")
+        obj <- readRDS(files[i]) 
 
         # Temporary renaming for compatibility
         if ("data.sub" %in% names(obj)) {
           names(obj)[names(obj) == "data.sub"] <- "data.grp.tier"
         }
 
-        post_dist_df_list[[i]] <- obj$post_dist_df
+        post_dist_df_list[[i]] <- obj$post_dist_df %>%
+        mutate(depth = tier)
+
         data_tier_list[[i]] <- unique(obj$data.grp.tier$Tier5) 
       }
 
@@ -568,7 +674,7 @@ spatial_agg_prep <- function() {
           model_name = as.character(model_name),
           tier_type = as.character(tier_type)
         ) |>
-        dplyr::select(fYEAR, Tier5, id_loc, draw, pred, model_name, tier_type)
+        dplyr::select(fYEAR, Tier5, id_loc, draw, pred, model_name, tier_type, depth)
       )
     
       # Bind and weight all tiers
@@ -581,7 +687,10 @@ spatial_agg_prep <- function() {
 
     # Bind all Tier5 rows
       post_dist_df_tier5 <- dplyr::bind_rows(post_dist_df_list) %>%
-        dplyr::left_join(tiers.lookup)
+        dplyr::left_join(tiers.lookup) %>%
+        dplyr::mutate(
+          reef_area = reef_area / 1000000
+        )
 
       rm(post_dist_df_list)
 
@@ -593,8 +702,6 @@ spatial_agg_prep <- function() {
     }
 
 spatial_agg <- function(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier.sf, tier_col) {
-
-      # tier_col <- c("Tier5", "Tier4", "TierX")
 
         if (tier_col == "Tier5") {
         
@@ -620,7 +727,7 @@ spatial_agg <- function(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier
 
         } else if (tier_col == "Tier4") {
           
-          # NRM scale
+          # ecoregion scale
           sum_area <- get_sum_area(post_dist_df_all, tier_col)
 
           pred_tierIndex <- post_dist_df_all %>%
@@ -655,74 +762,11 @@ spatial_agg <- function(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier
       !!sym(tier_col), Year, Median, Lower, Upper,
       Fold.Change, P.up, P.down, Change, Model.name
      )
-
-
-        } else {
-
-      # Central GBR scale
-      
-      # Create on unique tier5 first 
-      post_dist_sf <- post_dist_df_all %>%
-       group_by(Tier5) %>%
-       slice(1) %>%
-       left_join(tier.sf %>% select(Tier5, geometry), by = "Tier5") %>%
-       st_as_sf() %>%
-       dplyr::select(Tier5) 
-
-      lat_box <- st_bbox(c(
-       xmin = 142,
-       xmax = 152,
-       ymin = -20.7,
-       ymax = -15.4
-       ), crs = st_crs(post_dist_sf))
-
-      lat_box_sf <- st_as_sfc(lat_box)
-
-      sf_use_s2(FALSE) 
-      post_dist_sf_filtered <- st_intersection(post_dist_sf, lat_box_sf) 
+      } else {
+     stop("tier_col must be either 'Tier5' or 'Tier4'")
     
-      # Now get the new info into the bigtable 
+     }
 
-      post_dist_df_all <- post_dist_df_all %>%
-        filter(Tier5 %in% post_dist_sf_filtered$Tier5) %>%
-       mutate(TierX = "Central GBR") 
-
-      sum_area <- get_sum_area(post_dist_df_all, tier_col)
-
-      pred_tierIndex <- post_dist_df_all %>%
-            dplyr::group_by(fYEAR, draw, TierX, model_name) %>%
-            dplyr::summarise(
-              cover = sum(weighted_pred, na.rm = TRUE),
-              .groups = "drop"
-            ) %>%
-            dplyr::left_join(sum_area, by = tier_col) %>%
-            dplyr::mutate(
-              cover_prop = cover / sum_area
-            ) %>%
-            dplyr::select(fYEAR,  !!sym(tier_col), draw, model_name, cover_prop)
-
-      predictions <- make_contrasts(pred_tierIndex, tier_col)
-
-      pred_tierIndex <- dplyr::bind_rows(predictions) %>%
-            dplyr::mutate(
-              Median = value,
-              Lower  = .lower,
-              Upper  = .upper
-      ) %>%
-           dplyr::rename(
-             Fold.Change = fold_change,
-             P.up        = prob_up,
-             P.down      = prob_down,
-            Change      = arrow,
-            Model.name  = model_name,
-            Year        = year
-      ) %>%
-      dplyr::select(
-      !!sym(tier_col), Year, Median, Lower, Upper,
-      Fold.Change, P.up, P.down, Change, Model.name
-     )
-
-        }
       # Extra information of the regions
 
          info_region <- extract_info_region(post_dist_df_all, tier_col)
@@ -745,6 +789,73 @@ spatial_agg <- function(post_dist_df_tier5, post_dist_df_all, tiers.lookup, tier
 
 }
 
+
+spatial_agg_island <- function(post_dist_df_all, tiers.lookup, tier.sf, unique_hex_island) {
+
+        tier_col <- "NAME"
+        
+        # Add Island name 
+        post_dist_df_all_island <- post_dist_df_all %>%
+        left_join(unique_hex_island)
+
+          
+        # get reef area of each islands
+        sum_area <- get_sum_area(post_dist_df_all_island, tier_col)
+
+        pred_tierIndex <- post_dist_df_all_island %>%
+            dplyr::group_by(fYEAR, draw, !!sym(tier_col), model_name) %>%
+            dplyr::summarise(
+              cover = sum(weighted_pred, na.rm = TRUE),
+              .groups = "drop"
+            ) %>%
+            dplyr::left_join(sum_area, by = tier_col) %>%
+            dplyr::mutate(
+              cover_prop = cover / sum_area
+            ) %>%
+            dplyr::select(fYEAR, !!sym(tier_col), draw, model_name, cover_prop)
+
+        predictions <- make_contrasts(pred_tierIndex, tier_col)
+
+        pred_tierIndex <- dplyr::bind_rows(predictions) %>%
+            dplyr::mutate(
+              Median = value,
+              Lower  = .lower,
+              Upper  = .upper
+             ) %>%
+           dplyr::rename(
+             Fold.Change = fold_change,
+             P.up        = prob_up,
+             P.down      = prob_down,
+            Change      = arrow,
+            Model.name  = model_name,
+            Year        = year
+      ) %>%
+      dplyr::select(
+      !!sym(tier_col), Year, Median, Lower, Upper,
+      Fold.Change, P.up, P.down, Change, Model.name
+     )
+
+      # Extra information of the regions
+
+         info_region <- extract_info_region(post_dist_df_all_island, tier_col)
+
+        # ---- Save results ----
+        readr::write_csv(
+          pred_tierIndex,
+          file = paste0("../data/output_", tier_col, ".csv"),
+          quote = "none"
+        )
+
+             # ---- Save results ----
+        readr::write_csv(
+          info_region,
+          file = paste0("../data/info_", tier_col, ".csv"),
+          quote = "none"
+        )
+    
+     return(list(info_region = info_region, pred_table = pred_tierIndex)) 
+
+}
 
 #############################################
 ######### Attribution of disturbances 
@@ -906,11 +1017,11 @@ plot_conditional_time <- function(mod_obj, mod_name, save_dir = "../figures") {
   # List of variables to plot with labels
   plot_vars <- list(
     max_dhw = "Heat Stress",
-    max_dhw.lag1 = "Heat Stress (lag 1)",
-    max_dhw.lag2 = "Heat Stress (lag 2)",
-    max_cyc = "Cyclone Exposure",
-    max_cyc.lag1 = "Cyclone Exposure (lag 1)",
-    max_cyc.lag2 = "Cyclone Exposure (lag 2)"
+   # max_dhw.lag1 = "Heat Stress (lag 1)",
+  #  max_dhw.lag2 = "Heat Stress (lag 2)",
+    max_cyc = "Cyclone Exposure"
+  #  max_cyc.lag1 = "Cyclone Exposure (lag 1)",
+  #  max_cyc.lag2 = "Cyclone Exposure (lag 2)"
   )
   
   # Loop over variables
@@ -1013,7 +1124,8 @@ predict_newdata <- function(mod_M, new_BAU_data, hexpred, obj_frk, title_n, max_
   return(list(p, pred_sum_sf)) # p_insert,  
 }
 
-predict_year <- function(mod_M, new_BAU_data, hexpred, obj_frk, title_n, max_cover){
+predict_year_island <- function(mod_M, new_BAU_data, hexpred, obj_frk, 
+                                unique_hex_island, title_n, max_cover){ 
   
   newpred <- predict(mod_M, new_BAU_data = new_BAU_data)
   
@@ -1021,80 +1133,97 @@ predict_year <- function(mod_M, new_BAU_data, hexpred, obj_frk, title_n, max_cov
     mutate(fYEAR = obj_frk$ST_BAUs@data$fYEAR) %>%
     mutate(Tier5 = obj_frk$ST_BAUs@data$Tier5) %>%
     mutate(id_loc = row_number()) %>%
-    tidyr::pivot_longer(!c(fYEAR,Tier5,id_loc),
+    tidyr::pivot_longer(!c(fYEAR, Tier5, id_loc),
                         names_to = "draw", 
                         values_to = "pred")    
   
   # Spatial maps 
   hexpred$Tier5 <- as.factor(hexpred$Tier5)
   
-  pred_sum_sf <- post_dist_df %>% group_by(fYEAR, Tier5) %>% 
+  pred_sum_sf <- post_dist_df %>% 
+    group_by(fYEAR, Tier5) %>% 
     median_hdci(pred) %>%
-    inner_join(hexpred %>% group_by(Tier5) %>% 
-               summarize() %>% dplyr::select(geometry, Tier5)) %>% 
+    inner_join(hexpred %>% 
+                 group_by(Tier5) %>% 
+                 summarize() %>% 
+                 dplyr::select(geometry, Tier5)) %>% 
     st_as_sf(sf_column_name = "geometry") %>%
-    mutate(Unc = .upper - .lower) %>%
-    mutate(tier_fYEAR = paste0(Tier5,fYEAR)) %>%
-    dplyr::select(fYEAR, Tier5, pred, .lower, .upper, Unc, tier_fYEAR)
-
+    mutate(Unc = .upper - .lower,
+           tier_fYEAR = paste0(Tier5, fYEAR)) %>%
+    dplyr::select(fYEAR, Tier5, pred, .lower, .upper, Unc, tier_fYEAR) %>%
+  left_join(
+    unique_hex_island %>% st_drop_geometry(),
+    by = "Tier5"
+  )
+  
+  # palettes
   pal_pred <- LaCroixColoR::lacroix_palette("Pamplemousse", n = 100, type = "continuous")
-
-  p <- ggplot() + 
-    geom_sf(data = pred_sum_sf, aes(fill = pred*100), col = "transparent") +
-    coord_sf(expand = F) +
-    scale_fill_gradientn(
-      colours = pal_pred,    
-      name = "Coral Cover (%)",
-      limits = c(0, max_cover), 
-    ) + 
-    facet_wrap(~ fYEAR) +
-    theme_pubr() +
-    xlab("Longitude") +
-    ylab("Latitude") +
-    theme(
-      legend.position = "top",
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10),
-      strip.background = element_blank(),
-      strip.text = element_text(size = 12)
-    ) +
-    ggtitle(title_n) +
-    theme(plot.title = element_text(size = 13, hjust = 0.5),
+  pal_unc  <- wesanderson::wes_palette("Zissou1", 100, type = "continuous")
+  
+  # ---- split by island ----
+  plots <- pred_sum_sf %>%
+    split(.$NAME) %>%
+    purrr::imap(function(df_island, island_name) {
+      
+      # prediction plot
+      p <- ggplot() + 
+        geom_sf(data = df_island, aes(fill = pred * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_pred,
+          name = "Coral Cover (%)",
+          limits = c(0, max_cover)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = paste0(title_n, " - ", island_name),
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
           axis.text.x = element_text(size = 10, angle = 90, hjust = 1),
-           axis.text.y = element_text(size = 10),
-           axis.title.x = element_text(size = 12),
-           axis.title.y = element_text(size = 12)) 
-
-pal_unc<- wes_palette("Zissou1", 100, type = "continuous")
-
-  p_unc <- ggplot() + 
-    geom_sf(data = pred_sum_sf, aes(fill = Unc*100), col = "transparent") +
-    coord_sf(expand = F) +
-    scale_fill_gradientn(
-      colours = pal_unc,    
-      name = "Uncertainty range (%)",
-      limits = c(0,100), 
-    ) +    
-    facet_wrap(~ fYEAR) +
-    theme_pubr() +
-    xlab("Longitude") +
-    ylab("Latitude") +
-    theme(
-      legend.position = "top",
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10),
-      strip.background = element_blank(),
-      strip.text = element_text(size = 12)
-    ) +
-    ggtitle(title_n) +
-    theme(plot.title = element_text(size = 13, hjust = 0.5),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12)
+        )
+      
+      # uncertainty plot
+      p_unc <- ggplot() + 
+        geom_sf(data = df_island, aes(fill = Unc * 100), col = "transparent") +
+        coord_sf(expand = FALSE) +
+        scale_fill_gradientn(
+          colours = pal_unc,
+          name = "Uncertainty range (%)",
+          limits = c(0, 100)
+        ) +
+        facet_wrap(~ fYEAR) +
+        theme_pubr() +
+        labs(
+          title = paste0(title_n, " - ", island_name),
+          x = "Longitude",
+          y = "Latitude"
+        ) +
+        theme(
+          legend.position = "top",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12),
+          plot.title = element_text(size = 13, hjust = 0.5),
           axis.text.x = element_text(size = 10, angle = 90, hjust = 1),
-           axis.text.y = element_text(size = 10),
-           axis.title.x = element_text(size = 12),
-           axis.title.y = element_text(size = 12))  
-
- return(list(p = p, p_unc = p_unc))
-}
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12)
+        )
+      
+      list(p = p, p_unc = p_unc)
+    })
+                                }
 
 plot_diff <- function(pred_high, pred_low,  title_n){
 diff_pred <- pred_high %>%
@@ -1324,29 +1453,31 @@ plot_qq_unif <- function(sim_listrix, test_uniformity = FALSE,
   }
   if (test_outliers) {
     tmp_ot <- outliers_fct(sim_listrix, plot = FALSE)
-    ot_lab_a <- paste("Outlier test: p =", round(tmp_ot$p.value, digits = 5))
-    ot_lab_b <- paste("Deviation:", ifelse(tmp_ot$p.value < 0.05, "Significant",
+    pval_ot <- ceiling(tmp_ot$p.value * 10) / 10
+    ot_lab_a <- paste("Outlier test: p =", pval_ot)
+    ot_lab_b <- paste("Deviation:", ifelse(pval_ot < 0.05, "Significant",
                                            "N.S."))
     p_ <- p_ +
       annotate("text", x = 0, y = 0.78, hjust = 0, vjust = 0.5, size = 3,
-               label = ot_lab_a, colour = ifelse(tmp_ot$p.value < 0.05,
+               label = ot_lab_a, colour = ifelse(pval_ot < 0.05,
                                                  "tomato", "black")) +
       annotate("text", x = 0, y = 0.70, hjust = 0, vjust = 0.5, size = 3,
-               label = ot_lab_b, colour = ifelse(tmp_ot$p.value < 0.05,
+               label = ot_lab_b, colour = ifelse(pval_ot < 0.05,
                                                  "tomato", "black"))
     }
   if (test_dispersion) {
     tmp_ds <- dispersion_fct(sim_listrix, alternative = "two.sided",
                              plot = FALSE)
-    ds_lab_a <- paste("Dispersion test: p =", round(tmp_ds$p.value, digits = 5))
-    ds_lab_b <- paste("Deviation:", ifelse(tmp_ds$p.value < 0.05, "significant",
+    pval_disp <- ceiling(tmp_ds$p.value * 10) / 10
+    ds_lab_a <- paste("Dispersion test: p =", pval_disp)
+    ds_lab_b <- paste("Deviation:", ifelse(pval_disp < 0.05, "significant",
                                            "N.S."))
     p_ <- p_ +
       annotate("text", x = 1, y = 0.12, hjust = 1, vjust = 0.5, size = 3,
-               label = ds_lab_a, colour = ifelse(tmp_ds$p.value < 0.05,
+               label = ds_lab_a, colour = ifelse(pval_disp < 0.05,
                                                  "tomato", "black")) +
       annotate("text", x = 1, y = 0.04, hjust = 1, vjust = 0.5, size = 3,
-               label = ds_lab_b, colour = ifelse(tmp_ds$p.value < 0.05,
+               label = ds_lab_b, colour = ifelse(pval_disp < 0.05,
                                                  "tomato", "black"))
   }
   p_

@@ -581,7 +581,10 @@ spatial_agg_prep <- function() {
 
     # Bind all Tier5 rows
       post_dist_df_tier5 <- dplyr::bind_rows(post_dist_df_list) %>%
-        dplyr::left_join(tiers.lookup)
+        dplyr::left_join(tiers.lookup) %>%
+        dplyr::mutate(
+          reef_area = reef_area / 1000000
+        )
 
       rm(post_dist_df_list)
 
