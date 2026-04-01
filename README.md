@@ -13,7 +13,7 @@ Reproducible study results
 
 ## Content 
 
-This repository contains the results presented in the paper “Predicting coral trends and attributing drivers of change from local to broad spatial scales” by Vercelloni et al. 
+This repository contains the results presented in the paper “Predicting coral trends from local to broad spatial scales” by Vercelloni et al. 
 
 The files `Appendix_A.html` and `Appendix_B.html` correspond to the manuscript appendices. They can be reproduced by rendering the quarto documents located in the `scripts/` directories. 
 
@@ -32,7 +32,7 @@ Monitoring and disturbance data are provided in the `Appendix_A/data` and `Appen
 To cite the data, please use:
 - `Appendix_A`: Australian Institute of Marine Science (AIMS). (2025). ReefCloud public data (Australia, 2006–2024). Retrieved from https://apps.aims.gov.au/metadata/view/1997de64-b274-427f-8cdc-d01b54e623f9
  (accessed 01-Dec-2025).
-- `Appendix_B`: National Oceanographic and Atmospheric Association (NOAA). U.S. Pacific Islands National Coral Reef Monitoring Program (NCRMP). Retrived from https://www.fisheries.noaa.gov/inport/item/25274 (accessed 01-Dec-2025).
+- `Appendix_B`: National Oceanographic and Atmospheric Association (NOAA). U.S. Pacific Islands National Coral Reef Monitoring Program (NCRMP). Retrieved from https://www.fisheries.noaa.gov/inport/item/25274 (accessed 01-Dec-2025).
 
 ## License
 
