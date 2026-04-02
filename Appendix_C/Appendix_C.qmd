@@ -63,6 +63,7 @@ css: styles.css
 editor:
   markdown:
     wrap: 72
+bibliography: ref.bib
 ---
 
 ```{r setup, chunkOpts, echo = FALSE}
@@ -72,11 +73,11 @@ knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
 To be displayed on a big screen. 
 :::
 
-This case study is designed to assess the model’s ability to predict coral cover at the local (tier) scale under varying spatial and temporal data resolutions. 
+### Summary of the ReefCloud database
 
-In May 2025, the ReefCloud pipeline included 11,820 public monitored reef locations across the world, but its temporal and spatial coverage is highly uneven (@tbl-rc). Temporally, 92.1\% of sites had short-term data (1–5 years of monitoring), while medium-term (>5–15 years) and long-term (>15 years) monitoring account for just 6.6\% and 1.2\%, respectively. Spatially, monitoring was concentrated in Australia (37.1\% of locations), followed by the Pacific Ocean (32.2\% across 34 countries, excluding Australia) and the Indian Ocean (24.9\% across 36 countries). 
+In April 2026, the ReefCloud database contained 4,722 publicly monitored reef locations spanning 51 countries across four regions (@tbl-1). Most regions were dominated by short-term monitoring (sites re-surveyed every 1–5 years), while medium-term monitoring (5–15 years) was rare. Long-term monitoring (>15 years) was observed only in Australia. Most of monitoring locations were concentrated in Australia (42.1\%) and in the Pacific Ocean excluding Australia (32.4\%). 
 
-This disparity highlights both the dominance of short-term public datasets and the geographic concentration of monitoring efforts via ReefCloud.
+These characteristics highlight both the dominance of short-term public datasets and the geographic concentration of monitoring efforts within the ReefCloud database.
 
 ```{r}
 #| include: true
@@ -92,81 +93,18 @@ setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/
 source("R/packages.R")
 source("R/functions.R")
 
-rc_table <- tibble::tibble(
-  `Ocean Basin` = c(
-    "Atlantic Ocean",
-    "Australia",
-    "Indian Ocean",
-    "Pacific Ocean (excl. Australia)",
-    "Persian Gulf",
-    "Red Sea"
-  ),
-  `Site Overall (%)` = list(
-    c(percentage = 2.6, count = 306),
-    c(percentage = 37.2, count = 4392),
-    c(percentage = 24.9, count = 2945),
-    c(percentage = 32.2, count = 3801),
-    c(percentage = 0.5, count = 62),
-    c(percentage = 2.7, count = 314)
-  ),
-  `Nbre of countries` = c(12, 1, 36, 34, 5, 4),
-  `Nbre of programs` = c(24, 297, 255, 292, 11, 23),
-  `Short_term data (%)` = list(
-    c(percentage = 100, count = 306),
-    c(percentage = 85.2, count = 3744),
-    c(percentage = 95.6, count = 2817),
-    c(percentage = 95.9, count = 3647),
-    c(percentage = 100, count = 62),
-    c(percentage = 100, count = 314)
-  ),
-  `Medium_term data (%)` = list(
-    c(percentage = 0, count = 0),
-    c(percentage = 11.5, count = 507),
-    c(percentage = 4.2, count = 123),
-    c(percentage = 4.0, count = 152),
-    c(percentage = 0, count = 0),
-    c(percentage = 0, count = 0)
-  ),
-  `Long_term data (%)` = list(
-    c(percentage = 0, count = 0),
-    c(percentage = 3.2, count = 141),
-    c(percentage = 0.2, count = 5),
-    c(percentage = 0.05, count = 2),
-    c(percentage = 0, count = 0),
-    c(percentage = 0, count = 0)
-  )
-)
-
-rc_table_formatted <- rc_table %>%
-  mutate(
-    `Site Overall (%)` = sapply(`Site Overall (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
-    `Short_term data (%)` = sapply(`Short_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
-    `Medium_term data (%)` = sapply(`Medium_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")")),
-    `Long_term data (%)` = sapply(`Long_term data (%)`, function(x) paste0(x["percentage"], " (", x["count"], ")"))
-  )
-
+appendix_dir <- "."
 ```
 
-```{r}
-#| label: tbl-rc
+
+
+```{r, fig.width=15, fig.height=15}
+#| label: tbl-1
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in the ReefCloud pipeline as of June 2025. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-kableExtra::kbl(
-  rc_table_formatted,
-  align = c("l", "c", "c", "c", "c"),
-  format = "html"
-) %>%
- kableExtra::kable_styling(
-    full_width = FALSE,
-    position = "center",
-    bootstrap_options = c("striped", "hover", "condensed"),
-    font_size = 14
-  ) %>%
-  kableExtra::row_spec(0, bold = TRUE)    
-```
-
-We also used the simulation framework to investigate the robustness of the predictive model under controlled conditions, where simulated coral cover values are available everywhere across space. This strategy enables the evaluation of prediction accuracy at unobserved locations, in the absence of observational data for validation. It also facilitates a detailed assessment of uncertainty propagation through the spatial aggregation process at broader spatial scales.
+#| fig-cap: Summary of public datasets available in the ReefCloud pipeline as of April 2026. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years). Data are considered public when stakeholders have consented to include them in analytical analyses. Regions were extracted using the geospatial data of [@BODC2023].  
+print_attr_plots(appendix_dir, "summary_table_020426")  
+``` 
 
 ```{r}
 #| include: false
@@ -251,7 +189,9 @@ table_data <- data.frame(
 assign("FIGURES_PATH", "/report/extra/", envir = .GlobalEnv)
 ```
 
-### Introduction to Synthos
+### Introduction to the synthetic study
+
+We developed a simulator to assess the robustness of our predictive model under controlled conditions, where simulated coral cover values are available across the entire spatial domain. In the statistical modelling framework, all data are used to fit the model which limits the ability to reserve truly independant observations for validation [@mcelreath2018statistical], although leave-out-data analyses can still be implemented (see Appendix A). This synthetic study allowed us to evaluate prediction accuracy across the full predictive domain, rather than at a limited number of randomly chosen locations. Such simulation-based approaches are commonly used to assess analytical methods and are widely applied in ecology and statistics [@zurell2010virtual] [@may2018mobsim]. We also used to approach to test the predictive model under varying spatial and temporal data resolutions as examplied in @tbl-1.    
 
 The R package synthos [GitHub](https://open-aims.github.io/synthos/index.html) generates synthetic data with the primarly aim to test the model robstuness under varying spatial and temporal data resolutions, in a controlled enviroment. The data are created from spatio-temporal dependency structures mimicing baselines, population dynamics, disturbance regimes and stochastic processes. 
 
@@ -266,7 +206,7 @@ Coral cover values are generated by combining baseline values, disturbance effec
 
 ### Simulation Scenarios 
 
-Three scenarios were tested, representing short-term, medium-term, long-term, and temporally sparse annual monitoring observations, each based on 15 permanent reefs (Table @tbl-scenario). This sample size corresponds to one-third of the total number of simulated reefs. A fourth scenario represents a sparse temporal resolution, in which 50 reefs are monitored over 15 years with varying survey intensities. Each reef is randomly surveyed between 2 and 15 times, with no more than 5 years between any two consecutive surveys. This scenario mimics the aggregation of different data sources with permanent and opportunistic observations. 
+Three scenarios were tested, representing short-term, medium-term, long-term, and temporally sparse annual monitoring observations, each based on 15 permanent reefs (@tbl-scenario). This sample size corresponds to one-third of the total number of simulated reefs. A fourth scenario represents a sparse temporal resolution, in which 50 reefs are monitored over 15 years with varying survey intensities. Each reef is randomly surveyed between 2 and 15 times, with no more than 5 years between any two consecutive surveys. This scenario mimics the aggregation of different data sources with permanent and opportunistic observations. 
 
 ```{r}
 #| include: true
@@ -341,7 +281,7 @@ kableExtra::kbl(metrics, booktabs = TRUE, linesep = "") %>%
 ::: {.callout-tip}
 #### Results
 
-Predictive diagnostics show that the temporally-sparse scenario (50 reefs sampled with varying temporal intensities) produces the best predictive performance for all metrics (@fig-sim). This result is mainly driven by the ability of the model to leverage repeated observations to characterize temporal dynamics while also accounting for spatial structure across the full prediction domain, and explicitly capture the influences of disturbances as they unfolded across space and time. The medium- and long-term scenarios exhibit similar predictive performances with reduced predictive performance based on the continuous ranked probability (CRPS) and root-mean-squared prediction error (RMSPE) and interval score (IS). This result reflects a higher model uncertainty associated with coral cover predictions at locations without observations (Figures 23 & 24). The short-term scenario clearly differs in terms of coverage error, with true values more frequently falling outside the prediction intervals, likely reflecting intervals that are too narrow (Figure 26).
+Our diagnostics show that the temporally-sparse scenario (50 reefs sampled with varying temporal intensities) produces the best predictive performance for all metrics (@fig-sim). This result is mainly driven by the ability of the model to leverage repeated observations to characterize temporal dynamics while also accounting for spatial structure across the full prediction domain, and explicitly capture the influences of disturbances as they unfolded across space and time. The medium- and long-term scenarios exhibit similar predictive performances with reduced predictive performance based on the continuous ranked probability (CRPS) and root-mean-squared prediction error (RMSPE) and interval score (IS). This result reflects a higher model uncertainty associated with coral cover predictions at locations without observations (Figures 23 & 24). The short-term scenario clearly differs in terms of coverage error, with true values more frequently falling outside the prediction intervals, likely reflecting intervals that are too narrow (Figure 26).
 
 Each scenario achieved a satisfactory model fit, with $R^2$ values ranging from 0.88 for the long-term scenario to 0.99 for the temporally sparse scenario (@fig-fit). At the predictive domain level, the model reproduces the true simulated temporal patterns across scenarios, with some systematic underestimation evident in the long-term and temporally sparse scenarios (Figures 14–17). This is likely attributable to the more complex temporal dynamics resulting from an increased number of disturbances over extended simulation periods (Figures 39–46). The predictive effect sizes of disturbances indicate that uncertainty decreases from the short-term to the long-term scenario. This is primarily due to the greater and more variable disturbance exposure of reef locations across years, which allows the model to attribute their effects more accurately. The predictive effect size of cyclone exposure in the temporally sparse scenario exhibits lower uncertainty compared to the long-term scenario, whereas the effect size for heat stress shows higher uncertainty.
 

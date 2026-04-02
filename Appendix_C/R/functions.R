@@ -499,6 +499,24 @@ return(coef_table_all)
 ############# automated report
 #################################
 
+print_attr_plots <- function(appendix_dir, name_plot) {
+
+
+  # List files matching the pattern in the specified path
+  file_mod <- list.files(path = appendix_dir, pattern = name_plot, full.names = TRUE)
+  
+  # Generate plots for each file
+  p_mod <- lapply(file_mod, function(file_mod) {
+    ggplot2::ggplot() +
+      ggplot2::annotation_custom(grid::rasterGrob(png::readPNG(file_mod), interpolate = TRUE)) +
+      ggplot2::theme_void() 
+  })
+  
+  # Combine the plots using patchwork
+  combined_mod <- patchwork::wrap_plots(p_mod, ncol = 1)
+  return(combined_mod)
+}
+
 ## Grab png files associated with name_plot and add them together 
 
 print_attr_plots_level1 <- function(list_folders, name_plot) {
