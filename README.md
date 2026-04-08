@@ -15,13 +15,14 @@ Reproducible study results
 
 This repository contains the results presented in the paper “Predicting coral trends from local to broad spatial scales” by Vercelloni et al. 
 
-The files `Appendix_A.html` and `Appendix_B.html` correspond to the manuscript appendices. They can be reproduced by rendering the quarto documents located in the `scripts/` directories. 
+`Appendix_A.html` can be also reproduced by rendering the quarto document located in `Appendix_A` folder. 
 
-`Appendix_C.html` can be also reproduced by rendering the quarto document located in `Appendix_C` folder. 
+
+The files `Appendix_B.html` and `Appendix_C.html` correspond to the manuscript appendices. They can be reproduced by rendering the quarto documents located in the `scripts/` directories. 
 
 ## Data tables 
 
-Monitoring and disturbance data are provided in the `Appendix_A/data` and `Appendix_B/data` folder, which contains these files:
+Monitoring and disturbance data are provided in the `Appendix_B/data` and `Appendix_C/data` folder, which contains these files:
 
 - `reef_data_aggregated.csv`: observations of coral cover at data-tier locations. The table contains eight variables - `Tier4` (marine ecoregion id),`Tier5` (data-tier identifier), `fYEAR` (survey year), `COUNT` (count of coral cover), `TOTAL` (total point count), `LONGITUDE` (associated with Tier5 centroid), `LATITUDE` (associated with Tier5 centroid). 
 - `covariates_full_tier5.RData`: a shapefile containing disturbance information across all tiers. The table contains 22 variables with `Tier5` (all-tier identifier), `year`, `severity_dhw*` (severity of heat stress and associated time lags), `max_dhw*` (maximum values of degree heating weeks for the survey year and associated time lags), `severity_c*` (severity of cyclone exposure and associated time lags), `max_cyc*` (maximum cyclone exposure for the survey year expressed as hours of exposure to cyclonic waves and associated time lags).  
@@ -30,9 +31,9 @@ Monitoring and disturbance data are provided in the `Appendix_A/data` and `Appen
 - `reef_layer.sf.RData`: a shapefile of the Tropical Coral Reefs of the World 
 
 To cite the data, please use:
-- `Appendix_A`: Australian Institute of Marine Science (AIMS). (2025). ReefCloud public data (Australia, 2006–2024). Retrieved from https://apps.aims.gov.au/metadata/view/1997de64-b274-427f-8cdc-d01b54e623f9
+- `Appendix_B`: Australian Institute of Marine Science (AIMS). (2025). ReefCloud public data (Australia, 2006–2024). Retrieved from https://apps.aims.gov.au/metadata/view/1997de64-b274-427f-8cdc-d01b54e623f9
  (accessed 01-Dec-2025).
-- `Appendix_B`: National Oceanographic and Atmospheric Association (NOAA). U.S. Pacific Islands National Coral Reef Monitoring Program (NCRMP). Retrieved from https://www.fisheries.noaa.gov/inport/item/25274 (accessed 01-Dec-2025).
+- `Appendix_C`: National Oceanographic and Atmospheric Association (NOAA). U.S. Pacific Islands National Coral Reef Monitoring Program (NCRMP). Retrieved from https://www.fisheries.noaa.gov/inport/item/25274 (accessed 01-Dec-2025).
 
 ## License
 
