@@ -430,8 +430,8 @@ process_contrasts <- function(cellmeans_wide, tier_col) {
   direction_arrow <- fold_change |>
     group_by(year) |>
     mutate(arrow = case_when(
-      fold_change > 1 & prob_up >= 0.9 ~ "Up",
-      fold_change < 1 & prob_down >= 0.9 ~ "Down",
+      fold_change > 1.1 & prob_up >= 0.9 ~ "Up", 
+      fold_change < 0.9 & prob_down >= 0.9 ~ "Down",
       TRUE ~ "Flat"
     )) |>
     select(year, fold_change, prob_up, prob_down, arrow)

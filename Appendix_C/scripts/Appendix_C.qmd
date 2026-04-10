@@ -80,7 +80,7 @@ To be displayed on a big screen.
 #| echo: false
 #| eval: true
 rm(list=ls())
-#setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B/scripts")
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_C/scripts")
 
 source("../R/functions.R")
 
@@ -102,8 +102,17 @@ library(glue)
 library(kableExtra)
 library(wesanderson)
 library(rnaturalearth)
+library(tibble)
 
-appendix_dir <- "../figures" 
+data_summary <-  tibble(
+  Program.code = 56,
+  `No. of sites` = "100% (507)",
+  `No. of transects` = "100% (507)",
+  `Short-term data (%)` = "100% (507)",
+  `Medium-term data (%)` = "0% (0)",
+  `Long-term data (%)` = "0% (0)"
+)
+
 ```{r}
 #| include: false
 #| echo: false
@@ -599,14 +608,25 @@ p1
 p_islands
 ```
 
-```{r}
+```{r, fig.width=6, fig.height=6}
 #| label: tbl-1
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in the American Samoa. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_ASM")  
-```
-
+#| tbl-cap: Summary of public American Samoa datasets available in the ReefCloud pipeline as of March 2026. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years). Data are considered public when stakeholders have consented to include them in analytical analyses.   
+kableExtra::kbl(
+  data_summary,
+  caption = "",
+  align = c("l", "c", "c", "c", "c", "c"),
+  format = "html"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) 
+``` 
 
 ```{r, fig.width=5, fig.height=6}
 #| include: true
@@ -983,7 +1003,6 @@ info_NRM <- pred_NRM$info_region
 
 ggsave(p4, filename = "../figures/ecoregion_trend.png",
         width=6, height=5)
-
 ```
 
 ```{r, fig.width=8, fig.height=6}
@@ -1505,7 +1524,7 @@ ggsave(combined_plot_fit, filename = "../figures/models_fit.png",
         width=6, height=8)
 ```
 ```{r, fig.width=6, fig.height=6}
-#| label: r-squared
+#| label: fig-r-squared
 #| eval: true
 #| echo: false
 #| fig-cap:  Model goodness-of-fit for the three regions. Coral cover observations at the tier-level were used to fit the spatio-temporal models. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line.    
@@ -1527,7 +1546,7 @@ ggsave(res1, filename = "../figures/model_res.png",
 ```
 
 ```{r, fig.width=8, fig.height=6}
-#| label: mod-res
+#| label: fig-mod-res
 #| eval: true
 #| echo: false
 #| fig-cap: QQ plot residuals diagnostic.     

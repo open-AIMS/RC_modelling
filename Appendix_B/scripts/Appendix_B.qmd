@@ -80,9 +80,10 @@ To be displayed on a big screen.
 #| echo: false
 #| eval: true
 rm(list=ls())
-#setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_A/scripts")
+setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_B/scripts")
 
 source("../R/functions.R")
+appendix_dir <- "../figures"
 
 library(tidyverse)
 library(dplyr)
@@ -102,6 +103,7 @@ library(glue)
 library(kableExtra)
 library(wesanderson)
 library(rnaturalearth)
+library(tibble)
 
 ```{r}
 #| include: false
@@ -298,7 +300,84 @@ names(mod_) <- tier_map[names(mod_)]
 ordered <- c("Wet Tropics_1819", "Burdekin_1808", "Mackay Whitsunday_1820")
 mod_ <- mod_[ordered]
 
-appendix_dir <- "../figures" 
+
+data_summary_WT <- tibble(
+  `Program code` = c(1492, 1979, 246, 47, 511),
+  `No. of reefs` = c("24.5% (54)",
+                     "24.5% (54)",
+                     "30% (66)",
+                     "9.5% (21)",
+                     "11.4% (25)"),
+  `No. of transects` = c("23.8% (204)",
+                          "31.5% (270)",
+                          "38.6% (330)",
+                          "3.2% (27)",
+                          "2.9% (25)"),
+  `Short-term data (%)` = c("98.5% (201)",
+                            "0% (0)",
+                            "18.2% (60)",
+                            "88.9% (24)",
+                            "100% (25)"),
+  `Medium-term data (%)` = c("1.5% (3)",
+                             "100% (270)",
+                             "12.1% (40)",
+                             "11.1% (3)",
+                             "0% (0)"),
+  `Long-term data (%)` = c("0% (0)",
+                           "0% (0)",
+                           "69.7% (230)",
+                           "0% (0)",
+                           "0% (0)")
+)
+
+data_summary_B <- tibble(
+  `Program code` = c(1492, 1979, 246, 47, 511),
+  `No. of reefs` = c("30.3% (54)",
+                     "32% (57)",
+                     "12.4% (22)",
+                     "5.6% (10)",
+                     "19.7% (35)"),
+  `No. of transects` = c("10.9% (54)",
+                          "57.5% (285)",
+                          "22.2% (110)",
+                          "2% (10)",
+                          "7.5% (37)"),
+  `Short-term data (%)` = c("61.1% (33)",
+                            "0% (0)",
+                            "0% (0)",
+                            "100% (10)",
+                            "100% (37)"),
+  `Medium-term data (%)` = c("38.9% (21)",
+                             "100% (285)",
+                             "9.1% (10)",
+                             "0% (0)",
+                             "0% (0)"),
+  `Long-term data (%)` = c("0% (0)",
+                           "0% (0)",
+                           "90.9% (100)",
+                           "0% (0)",
+                           "0% (0)")
+)
+
+data_summary_M <- tibble(
+  `Program code` = c(1492, 1979, 246),
+  `No. of reefs` = c("35.1% (33)",
+                     "35.1% (33)",
+                     "29.8% (28)"),
+  `No. of transects` = c("9.8% (33)",
+                          "48.8% (165)",
+                          "41.4% (140)"),
+  `Short-term data (%)` = c("36.4% (12)",
+                            "0% (0)",
+                            "0% (0)"),
+  `Medium-term data (%)` = c("63.6% (21)",
+                             "100% (165)",
+                             "0% (0)"),
+  `Long-term data (%)` = c("0% (0)",
+                           "0% (0)",
+                           "100% (140)")
+)
+
 ```
 
 ```{r}
@@ -563,13 +642,26 @@ The Wet Tropics reef area is estimated at 1441 km² with 7.1% of the tiers conta
 The extracted disturbance values revealed multiple potential events, including four years with non-zero Degree Heating Weeks (DHW) values and eight years with detected exposure to cyclonic waves (@fig-dist-1). Despite covering only a small portion of the region, tiers with data (data-tier) captured disturbance intensity that reflected the broader NRM regional signal. Notably, the 2017 and 2024 heat stress event and, 2023 cyclone appeared more severe within the data-tiers compared to the regional mean, with high DHW values and hours of wave exposure, respectively.  
 
 
-```{r}
+```{r, fig.width=6, fig.height=6}
 #| label: tbl-1
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in the Wet Tropics. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_WetTropics")  
-```
+#| tbl-cap: Summary of public Wet Tropics datasets available in the ReefCloud pipeline as of December 2025. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years). Data are considered public when stakeholders have consented to include them in analytical analyses. 
+kableExtra::kbl(
+  data_summary_WT,
+  caption = "",
+  align = c("l", "c", "c", "c", "c", "c"),
+  format = "html"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) 
+``` 
+
 
 
 ```{r, fig.width=6, fig.height=8}
@@ -596,14 +688,25 @@ Burdekin reef area is estimated at 1507 km² with 4.2% of the tiers containing d
 
 We detected seven years with non-zero DHW values and nine years with detected exposure to cyclonic waves (@fig-dist-2), exceeding the number of potential disturbance events observed in the Wet Tropics. Mean DHW values recorded at the data-tier tended to be higher than regional means in 2017, 2020, 2022 and 2024. In contrast, cyclone exposure showed the opposite pattern, with mean values generally lower at the data-tier than across all tiers.
 
-```{r}
+```{r, fig.width=6, fig.height=6}
 #| label: tbl-2
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in Burdekin. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_Burdekin")  
-  
-```
+#| tbl-cap: Summary of public Burdekin datasets available in the ReefCloud pipeline as of December 2025. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years). Data are considered public when stakeholders have consented to include them in analytical analyses. 
+kableExtra::kbl(
+  data_summary_B,
+  caption = "",
+  align = c("l", "c", "c", "c", "c", "c"),
+  format = "html"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) 
+``` 
 
 ```{r, fig.width=6, fig.height=8}
 #| include: true
@@ -629,14 +732,25 @@ Mackay Whitsunday reef area is estimated at 2601 km² with 1.3% of the tiers con
 
 This region experienced the highest number of recorded cyclone events (nine), with a maximum mean cyclone exposure estimated at 42 hours of wave exposure (@fig-dist-3).
 
-```{r}
+```{r, fig.width=6, fig.height=6}
 #| label: tbl-3
 #| eval: true
 #| echo: false
-#| tbl-cap: Summary of public datasets available in Mackay Whitsunday. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years).   
-print_attr_plots(appendix_dir, "summary_table_Mackay")  
-  
-```
+#| tbl-cap: Summary of public Mackay Whitsunday datasets available in the ReefCloud pipeline as of December 2025. Percentages are based on the absolute counts provided in parentheses. Monitoring programs are classified by temporal resolution with short-term (0–5 years), medium-term (6–15 years), and long-term (>15 years). Data are considered public when stakeholders have consented to include them in analytical analyses. 
+kableExtra::kbl(
+  data_summary_M,
+  caption = "",
+  align = c("l", "c", "c", "c", "c", "c"),
+  format = "html"
+) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = c("striped", "hover"),
+    font_size = 14
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) 
+``` 
 
 ```{r, fig.width=6, fig.height=8}
 #| include: true
@@ -1545,7 +1659,7 @@ p_MW
 
 #### Model checking {.unnumbered}
 
-Model performance shows a strong agreement between predicted and observed coral cover at the data-tier level, with an $R^2$ scores ranging from 79\% for Burdekin up to 89\% for the Wet Tropics (@r-squared) with normally distributed residuals and absences of overdispersions (@mod-res). 
+Model performance shows a strong agreement between predicted and observed coral cover at the data-tier level, with an $R^2$ scores ranging from 79\% for Burdekin up to 89\% for the Wet Tropics (@fig-r-squared) with normally distributed residuals and absences of overdispersions (@fig-mod-res). 
 
 ```{r}
 #| include: false
@@ -1564,9 +1678,10 @@ ggsave(combined_plot_fit, filename = "../figures/models_fit.png",
         width=6, height=8)
 ```
 ```{r, fig.width=6, fig.height=8}
-#| label: r-squared
-#| eval: true
+#| include: true
 #| echo: false
+#| eval: true
+#| label: fig-r-squared
 #| fig-cap:  Model goodness-of-fit for the three regions. Coral cover observations at the tier-level were used to fit the spatio-temporal models. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line.    
 combined_plot_fit
 ``` 
@@ -1593,7 +1708,7 @@ ggsave(res_all, filename = "../figures/models_res.png",
 ```
 
 ```{r, fig.width=8, fig.height=6}
-#| label: mod-res
+#| label: fig-mod-res
 #| eval: true
 #| echo: false
 #| fig-cap: QQ plot residuals diagnostics.     
