@@ -13,11 +13,10 @@ authors:
       - ref: aims
   - name: Andrew Zammit‐Mangion
     affiliations:
-      - ref: UOW
+      - ref: UNSW
       - ref: SAEF
   - name: Matthew Sainsbury‐Dale
     affiliations:
-      - ref: UOW
       - ref: KAUST
   - name: Britta Schaffelke
     affiliations:
@@ -33,8 +32,8 @@ affiliations:
     name: Australian Institute of Marine Science, Cape Cleveland, 4810, Queensland, Australia
   - id: qut
     name: Centre for Data Science, Queensland University of Technology, Brisbane 4000, Queensland, Australia
-  - id: UOW
-    name: School of Mathematics and Applied Statistics, University of Wollongong, Wollongong 2522, New South Wales, Australia
+  - id: UNSW
+    name: School of Mathematics and Statistics, University of New South Wales, Sydney 2033, New South Wales, Australia
   - id: SAEF
     name: Securing Antarctica’s Environmental Future, University of Wollongong, Wollongong 2522, New South Wales, Australia
   - id: KAUST
@@ -80,7 +79,7 @@ To be displayed on a big screen.
 #| echo: false
 #| eval: true
 rm(list=ls())
-setwd("c:/Users/jvercell/OneDrive - Australian Institute of Marine Science/AIMS/01_Research projects/ReefCloud/SP_models/FRK_dev/git_content/Appendix_C/scripts")
+setwd(paste0(here::here(), "/Appendix_C/scripts"))
 
 source("../R/functions.R")
 
@@ -514,7 +513,7 @@ ggsave(p1, filename = "../figures/ASM_region_appendix.png", width = 8, height = 
 ## Paper 
 bbox_filtered <- st_bbox(unique_hex)
 bbox_poly <- st_as_sfc(bbox_filtered) %>%
-  st_buffer(0.05) 
+  st_buffer(0.07) 
 
 tier5_marked <- c("1912", "1902", "1936")  
 tier4_south_showed <- unique_hex %>% 
@@ -531,7 +530,7 @@ pp1 <- ggplot() +
           fill = "grey95",
           colour = "black",
           linewidth = 0.6) +
-  geom_sf(data = tier.sf.joined,
+  geom_sf(data = tier.sf.joined ,
           fill = NA,
           colour = "black",
           alpha = 0.2) +
@@ -546,13 +545,55 @@ pp1 <- ggplot() +
                  nudge_x = -.1,
                    box.padding = 0.1,
                    nudge_y = .3) +
+  coord_sf(xlim = c(roi_bbox["xmin"], roi_bbox["xmax"]),
+           ylim = c(roi_bbox["ymin"], -13)) + 
+  ggpubr::theme_pubr() +
+  xlab("Longitude") +
+  ylab("Latitude") +  
+  annotation_scale(
+  location = "bl",        
+  width_hint = 0.3,
+  pad_x = unit(2.0, "cm"),
+  pad_y = unit(0.15, "cm")
+  ) +
+  annotation_north_arrow(
+  location = "bl",         
+  which_north = "true",
+  style = north_arrow_fancy_orienteering,
+  pad_x = unit(0.2, "cm"),
+  pad_y = unit(.05, "cm")
+  ) +
+  scale_fill_manual("Island", values = c(
+  "Tutuila"       = "#5b2a86",  
+  "Ofu-Olosega"   = "#2c7fb8", 
+  "Ta‘ū"          = "#41b6c4", 
+  "Rose Atoll"    = "#7fcdbb"
+)) + theme(legend.position = "none")
+pp1 
+
+ggsave(pp1, filename = "../figures/ASM_region.png", width = 9.5, height = 5)
+
+# Swain Island insert 
+tier_swain <- hex_island %>% filter(NAME == "Swains Island")
+bbox_filtered <- st_bbox(unique_hex %>% filter(Tier5 %in% tier_swain$Tier5)) 
+bbox_poly <- st_as_sfc(bbox_filtered) %>%
+  st_buffer(0.05)
+
+pp2 <- ggplot() +
+  geom_sf(data = tier.sf.joined %>% filter(Tier5 %in% tier_swain$Tier5),
+          fill = NA,
+          colour = "black",
+          alpha = 0.2) +
+  geom_sf(data = hex_island %>% filter(Tier5 %in% tier_swain$Tier5),
+          aes(fill = NAME),
+          colour = "#4D4D4D",
+          alpha = 0.8,
+          linewidth = 0.05 ) +
   geom_sf(data = bbox_poly,
         aes(colour = "American Samoa"),
           fill = NA,
-          linewidth = 0.9) +
-  coord_sf(xlim = c(roi_bbox["xmin"], roi_bbox["xmax"]),
-           ylim = c(roi_bbox["ymin"], roi_bbox["ymax"])) +
-  ggpubr::theme_pubr() +
+           linewidth = 0.9) +
+  ggpubr::theme_pubr(base_size = 18) +
   xlab("Longitude") +
   ylab("Latitude") + 
   scale_colour_manual(
@@ -561,14 +602,17 @@ pp1 <- ggplot() +
   ) + 
   annotation_scale(
   location = "bl",        
-  width_hint = 0.3
+  width_hint = 0.3,
+  pad_x = unit(2.0, "cm"),
+  pad_y = unit(0.15, "cm"),
+  text_cex = 1.2
   ) +
   annotation_north_arrow(
   location = "bl",         
   which_north = "true",
   style = north_arrow_fancy_orienteering,
-  pad_x = unit(0.1, "cm"),
-  pad_y = unit(.02, "cm")
+  pad_x = unit(0.2, "cm"),
+  pad_y = unit(.05, "cm")
   ) +
   scale_fill_manual("Island", values = c(
   "Tutuila"       = "#5b2a86",  
@@ -576,17 +620,25 @@ pp1 <- ggplot() +
   "Ta‘ū"          = "#41b6c4", 
   "Rose Atoll"    = "#7fcdbb",  
   "Swains Island" = "#f768a1"
-)) + theme(legend.position = "top")
-pp1 
+)) + theme(legend.position = "none") + 
+scale_x_continuous(
+  breaks = c(-171.1, -171),
+  labels = c("171.10°W", "171.00°W")
+) +
+scale_y_continuous(
+  breaks = c(-11.1, -11),
+  labels = c("11.10°S", "11.00°S")
+)
 
-ggsave(pp1, filename = "../figures/ASM_region.png", width = 10, height = 10)
 
+pp2   
+ggsave(pp2, filename = "../figures/ASM_region_SI.png", width = 7, height = 7)
 ```
 ### American Samoa {.unnumbered}
 
-American Samoa comprises five islands, representing a total reef area of 59.2 km², with 75% of tiers containing data. This case study focuses on islands belonging to the single ecoregion that encompasses the entire country (@fig-map-1) and its islands (@fig-map-2).
+American Samoa comprises three islands and two atolls, representing a total reef area of 59.2 km², with 75% of tiers containing data. This case study focuses on islands and atolls (hereafter referred to as "islands") belonging to the single Marine Ecoregion of the World (MEOW) that encompasses the entire country (@fig-map-1) and its islands (@fig-map-2).
 
-Coral cover observations were extracted from the ReefCloud database on 15 March 2026. A total of 507 transects from 507 sites collected between 2015 and 2023 by the NOAA's U.S. Pacific Islands National Coral Reef Monitoring Program (@tbl-1) at depths varying 3 and 10 metres. At the data-tier level, observed coral cover varied from 0.5\% to 69.6\% with a median coral cover values estimated at 25.3\% between 2015 to 2023 (@fig-data-1). 
+Coral cover observations were extracted from the ReefCloud database on 15 March 2026. A total of 507 transects from 507 sites collected between 2015 and 2023 by the NOAA's U.S. Pacific Islands National Coral Reef Monitoring Program (@tbl-1) at depths varying 3 and 10 metres. At the local scale, observed coral cover varied from 0.5\% to 69.6\% with a median coral cover values estimated at 25.3\% between 2015 to 2023 (@fig-data-1). 
 
 The extracted disturbance values indicated multiple potential events, including five years with non-zero Degree Heating Weeks (DHW) and two years with detected exposure to cyclonic waves (@fig-dist-1). Disturbance events were infrequently captured in the data tiers: only the 2015 heat-stress event was recorded at higher intensity, and Cyclone Gita (2018) at a comparable intensity to the regional signal.
 
@@ -948,7 +1000,7 @@ ggsave(p5, filename = "../figures/island_trend5.png",
 #| echo: false
 #| eval: false
 
-#### Regional NRM scale {.unnumbered}
+#### Regional scale (MEOW) {.unnumbered}
 
 pred_NRM <- spatial_agg(post_dist_df_tier5,  post_dist_df_all, tiers.lookup, tier.sf, "Tier4")
 
@@ -988,7 +1040,6 @@ plots <- pred_NRM$pred_table %>%
         x = "Year",
         y = "Coral cover (%)"
       ) +
-     # ylim(0, 70) +
       theme_pubr() +
       theme(
         axis.text  = element_text(size = 13),
@@ -1020,7 +1071,7 @@ p_island
 #| echo: false
 #| eval: false
 #| label: fig-pred-region
-#| fig-cap: Estimated coral trends at the ecoregion-scale from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+#| fig-cap: Estimated coral trends at the MEOW-scale from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
 p4
 ```
 
@@ -1170,7 +1221,7 @@ unique_hex_island <- plot_islands_custom_buffer(add_islands)$unique_hex_island
       
       # prediction plot
       p <- ggplot() + 
-        geom_sf(data = df_island, aes(fill = pred * 100), col = "transparent") +
+        geom_sf(data = df_island, aes(fill = pred * 100), col = "gray70") +
         coord_sf(expand = FALSE) +
         scale_fill_gradientn(
           colours = pal_pred,
@@ -1198,7 +1249,7 @@ unique_hex_island <- plot_islands_custom_buffer(add_islands)$unique_hex_island
       
       # uncertainty plot
       p_unc <- ggplot() + 
-        geom_sf(data = df_island, aes(fill = Unc * 100), col = "transparent") +
+        geom_sf(data = df_island, aes(fill = Unc * 100), col = "gray70") +
         coord_sf(expand = FALSE) +
         scale_fill_gradientn(
           colours = pal_unc,
@@ -1276,7 +1327,7 @@ plots_tul <- pred_sum_sf %>%
     filter(NAME == "Tutuila") 
 
 p_tul <- ggplot() + 
-        geom_sf(data = plots_tul, aes(fill = pred * 100), col = "transparent") +
+        geom_sf(data = plots_tul, aes(fill = pred * 100), col = "gray70") +
         coord_sf(expand = FALSE) +
         scale_fill_gradientn(
           colours = pal_pred,
@@ -1311,7 +1362,7 @@ p_tul <- ggplot() +
       
 # uncertainty plot
 p_unc_tul <- ggplot() + 
-        geom_sf(data = plots_tul, aes(fill = Unc * 100), col = "transparent") +
+        geom_sf(data = plots_tul, aes(fill = Unc * 100), col = "gray70") +
         coord_sf(expand = FALSE) +
         scale_fill_gradientn(
           colours = pal_unc,
@@ -1349,9 +1400,9 @@ p_Tutuila_paper <- p_tul + p_unc_tul  +
   plot_annotation(
     tag_levels = "a", 
     tag_suffix = ')', 
-    title = "Tutuila",
+    title = "Tutuila island",
     theme = theme(
-      plot.title = element_text(size = 20)))
+      plot.title = element_text(size = 20, hjust = 0.5)))
 
 ggsave(p_Tutuila_paper, filename = "../figures/Predictions_Tutuila.png",
          width=6, height=10)
@@ -1411,7 +1462,7 @@ ggsave(p_diff_ASM , filename = "../figures/ASM_diff.png",
 #| echo: false
 #| eval: true
 #| label: fig-pred-1
-#| fig-cap:  a) Predicted coral cover values across Tutuila island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.   
+#| fig-cap:  a) Predicted coral cover values across Tutuila island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_Tutuila
 ```
 
@@ -1423,7 +1474,7 @@ p_Tutuila
 #| echo: false
 #| eval: true
 #| label: fig-pred-2
-#| fig-cap:  a) Predicted coral cover values across Ofu-Olosega island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.    
+#| fig-cap:  a) Predicted coral cover values across Ofu-Olosega island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
 p_OO
 ```
 
@@ -1434,7 +1485,7 @@ p_OO
 #| echo: false
 #| eval: true
 #| label: fig-pred-3
-#| fig-cap:  a) Predicted coral cover values across Ta‘ū island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.    
+#| fig-cap:  a) Predicted coral cover values across Ta‘ū island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_T 
 ```
 
@@ -1445,7 +1496,7 @@ p_T
 #| echo: false
 #| eval: true
 #| label: fig-pred-4
-#| fig-cap:  a) Predicted coral cover values across Rose Atoll and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means.   
+#| fig-cap:  a) Predicted coral cover values across Rose Atoll and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_RA  
 ```
 
@@ -1456,13 +1507,13 @@ p_RA
 #| echo: false
 #| eval: true
 #| label: fig-pred-5
-#| fig-cap:  a) Predicted coral cover values across Swains Island and b) associated uncertainty range for each year between 2015-2023. Values correspond to the posterior means. 
+#| fig-cap:  a) Predicted coral cover values across Swains Island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
 p_SI 
 ```
 
 ### Association with Disturbances {.unnumbered}
 
-In American Samoa, cyclone exposure was significantly negatively associated with regional coral cover, with 95% prediction intervals not overlapping zero (@fig-cond-dist-1). The absolute decline between the minimum and maximum observed cyclone exposure, corresponds to a 16.1% reduction in coral cover (95% prediction interval: −27.8% to -1.2%, @fig-cond-all-1). 
+In American Samoa, cyclone exposure was negatively associated with regional coral cover, with 95% prediction intervals not overlapping zero (@fig-cond-dist-1). The absolute decline between the minimum and maximum observed cyclone exposure, corresponds to a 16.1% reduction in coral cover (95% prediction interval: −27.8% to -1.2%, @fig-cond-all-1). 
 
 Spatially, increasing magnitude of cyclone exposure alone (i.e., excluding heat stress) contributed to regional declines in coral cover (@fig-cond-space-1), with absolute losses estimated to range from 4.1% to 27.0%, and a regional average decline of 15.8% (@fig-cond-space-change-1).  
 
