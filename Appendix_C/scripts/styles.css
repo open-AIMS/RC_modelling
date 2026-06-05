@@ -1,0 +1,32 @@
+.quarto-title-block .quarto-title-banner {
+  background-image: url(resources/logo.png);
+  background-size: 300px;
+  background-position: left;
+  background-repeat: no-repeat;
+  padding-left: 10px;
+  background-origin: content-box;
+}
+
+.author {
+    margin-right: 10px; /* Adjust spacing if necessary */
+}
+
+
+/* Style for figure captions */
+.figcaption {
+  font-family: "Helvetica", sans-serif; /* Change font */
+  font-size: 0.8em;             /* Adjust font size */
+  text-align: center;           /* Center the caption */
+  margin-top: 5px;             /* Add space above the caption */
+}
+
+/* Style for table captions */
+.caption {
+  font-family: "Helvetica", sans-serif; /* Change font */
+  font-size: 0.8em;                  /* Adjust font size */
+  text-align: center;               /* Center the caption */
+  margin-bottom: 5px;              /* Add space below the caption */
+}
+
+
+

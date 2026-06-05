@@ -309,7 +309,7 @@ Other settings were kept constant across the simulation scenarios. The coral bas
 
 The hierarchical sampling design within reef incorporated a nested structure of 1 depth (10m), 2 permanent sites, 5 transects per site, 100 photoquadrats per transect. Finally, point-based observations are generated with 50 points per frame. Coral cover values are summarized at the transect scale by summing the number of coral count across all photoquadrats.  
 
-The spatial domain is divided into a 0.1° grid (~10 × 10 km hexagonal units, referred to as 'tiers'). Disturbance values are predicted onto these tiers, and transect-based coral cover values are aggregated within each tier (named data-tiers) for use in the spatio-temporal model. 
+The spatial domain is divided into a 0.1° grid (~10 × 10 km hexagonal units, referred to as 'predictive cells'). Disturbance values are predicted onto these predictive cells, and transect-based coral cover values are aggregated within each predictive cell (named data-cells) for use in the spatio-temporal model. 
 
 ### Predictive Performances 
 
@@ -378,7 +378,7 @@ fig_synthos <- purrr::walk(
     name_plot = "synthos_reef_10K", 
     subtitle = TRUE, 
     plot_labels = TRUE, 
-    label = "Spatial distribution of the synthetic reefs. The red dots indicate monitoring locations and hexagons represent tier boundaries. A tier is considered a data-tier if it contains a red dot; otherwise, it is classified as a predictive-tier for the scenario",
+    label = "Spatial distribution of the synthetic reefs. The red dots indicate monitoring locations and hexagons represent cell boundaries. A cell is considered a data-cell if it contains a red dot; otherwise, it is classified as a predictive-cell for the scenario",
     n_cols = 1
   )
 )
@@ -490,7 +490,7 @@ fig_data <- purrr::walk(
     name_plot = "trends_data_FRK", 
     subtitle = FALSE, 
     plot_labels = TRUE, 
-    label = "Examples of estimated coral trends at the data-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals. Dots show observed coral cover averaged at the tier level, which were used as the response variable in the spatio-temporal model. for the scenario",
+    label = "Examples of estimated coral trends at the data-cells. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals. Dots show observed coral cover averaged at the cell level, which were used as the response variable in the spatio-temporal model. for the scenario",
     n_cols = 1
   )
 )
@@ -507,7 +507,7 @@ fig_data <- purrr::walk(
     name_plot = "trends_nodata_FRK", 
     subtitle = FALSE, 
     plot_labels = TRUE, 
-    label = "Examples of estimated coral trends at predictive-tiers. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals, for the scenario",
+    label = "Examples of estimated coral trends at predictive-cells. Black lines represent mean predicted coral cover, with shaded areas indicating 95% predictive intervals, for the scenario",
     n_cols = 1
   )
 )
@@ -538,7 +538,7 @@ fig_data <- purrr::walk(
 #| label: fig-fit
 #| eval: true
 #| echo: false
-#| fig-cap: Model goodness-of-fit showing predicted coral cover versus true values for the prediction-tiers. True values corresponds to the mean coral cover at tier-level.   
+#| fig-cap: Model goodness-of-fit showing predicted coral cover versus true values for the prediction-cells. True values corresponds to the mean coral cover at cell-level.   
 
 print_attr_plots_level2(
   list_folders = included_dirs,

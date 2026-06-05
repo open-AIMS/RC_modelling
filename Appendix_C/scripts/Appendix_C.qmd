@@ -82,6 +82,7 @@ rm(list=ls())
 setwd(paste0(here::here(), "/Appendix_C/scripts"))
 
 source("../R/functions.R")
+appendix_dir <- "../figures"
 
 library(tidyverse)
 library(dplyr)
@@ -131,9 +132,6 @@ BY_TIER = 5
 
 ## Import reef layer 
 load("../data/reef_layer.sf.RData")
-
-# central GBR only
-depth_strata <- c("shallow", "deep")  
 
 # Define focal tier
 FOCAL_TIER <- paste0('Tier', as.numeric(BY_TIER) - 1)
@@ -198,15 +196,19 @@ HexPred_sf <- full_cov_raw |>
       dplyr::mutate(across(matches("^max_dhw.*"), ~ ifelse(.x >= out_dhw & As.Data == "No", NA, .x)))
 
 # ## Select covariates using info across regions 
-# selected_covar <- select_covariates(HexPred_sf) 
-# selected_covar <- selected_covar[!grepl("\\.(lag3|lag5)$", selected_covar)]
+selected_covar <- select_covariates(HexPred_sf) 
+selected_covar <- selected_covar[!grepl("\\.(lag3|lag5)$", selected_covar)]
 
 # ## Select covariates using info at data locations
-# selected_covar <- select_covariates(full_cov_raw_dat)
+selected_covar <- select_covariates(full_cov_raw_dat)
+
+# Manually remove lagged because of the lack of coral observations 
+selected_covar <- c("max_cyc", "max_dhw")
 
 # ## Check for collinearity 
-
-# selected_covar <- filter_non_collinear(full_cov_raw_dat, selected_covar, threshold = 0.7)
+check_covar <- filter_non_collinear(HexPred_sf, selected_covar, threshold = 0.7)
+selected_covar <- check_covar$vars
+ggsave(check_covar$corr_plot, filename = paste0(appendix_dir, "/correlation_plot_", TIER, ".png"), width = 6, height = 6)
 
 ## Make reefid
 
@@ -231,11 +233,11 @@ test_reefid <- HexPred_reefid2 %>% filter(Tier5 %in% data.grp.tier.ready$Tier5)
 
 ## For dev only
 #obj_frk <- frk_prep_2L(data.grp.tier.ready, HexPred_reefid2)  
-
 obj_frk <- frk_prep_3L(data.grp.tier.ready, HexPred_reefid2)  
 
 ## Define model formula
-model_formula <- COUNT ~ 1 + (1 | reefid) + max_cyc + max_dhw 
+model_formula <- paste("COUNT ~ 1 + (1 | reefid) +", paste(selected_covar, collapse = " + "))
+model_formula <- as.formula(model_formula)
 
 ## Fit FRK model
 M <- FRK(
@@ -636,18 +638,18 @@ ggsave(pp2, filename = "../figures/ASM_region_SI.png", width = 7, height = 7)
 ```
 ### American Samoa {.unnumbered}
 
-American Samoa comprises three islands and two atolls, representing a total reef area of 59.2 km², with 75% of tiers containing data. This case study focuses on islands and atolls (hereafter referred to as "islands") belonging to the single Marine Ecoregion of the World (MEOW) that encompasses the entire country (@fig-map-1) and its islands (@fig-map-2).
+American Samoa comprises three islands and two atolls, representing a total reef area of 59.2 km², with 75% of predictive cells containing data. This case study focuses on islands and atolls (hereafter referred to as subregions) belonging to the single Marine Ecoregion of the World (MEOW) that encompasses the entire country (@fig-map-1) and its subregions (@fig-map-2).
 
 Coral cover observations were extracted from the ReefCloud database on 15 March 2026. A total of 507 transects from 507 sites collected between 2015 and 2023 by the NOAA's U.S. Pacific Islands National Coral Reef Monitoring Program (@tbl-1) at depths varying 3 and 10 metres. At the local scale, observed coral cover varied from 0.5\% to 69.6\% with a median coral cover values estimated at 25.3\% between 2015 to 2023 (@fig-data-1). 
 
-The extracted disturbance values indicated multiple potential events, including five years with non-zero Degree Heating Weeks (DHW) and two years with detected exposure to cyclonic waves (@fig-dist-1). Disturbance events were infrequently captured in the data tiers: only the 2015 heat-stress event was recorded at higher intensity, and Cyclone Gita (2018) at a comparable intensity to the regional signal.
+American Samoa was exposed to five heat-stress events and two cyclones between 2015 and 2023 (@fig-dist-1). Disturbance events were infrequently captured in the data cells: only the 2015 heat-stress event was recorded at higher intensity to the regional signal, and Cyclone Gita (2018) at a comparable intensity to the regional signal.
 
 ```{r, fig.width=8, fig.height=10}
 #| include: true
 #| echo: false
 #| eval: true
 #| label: fig-map-1
-#| fig-cap: Locations of the five islands across the American Samoa. Red dots indicates the tiers containing coral cover observations between 2015-2023. 
+#| fig-cap: Locations of the five islands across the American Samoa. Red dots indicates the data cells containing coral cover observations between 2015-2023. 
 p1
 ```
 
@@ -656,7 +658,7 @@ p1
 #| echo: false
 #| eval: true
 #| label: fig-map-2
-#| fig-cap: Zoom-in on the islands. Red dots indicates the tiers containing coral cover observations between 2015-2023. 
+#| fig-cap: Zoom-in on the subregions. Red dots indicates the data cells containing coral cover observations between 2015-2023. 
 p_islands
 ```
 
@@ -685,7 +687,7 @@ kableExtra::kbl(
 #| echo: false
 #| eval: true
 #| label: fig-data-1
-#| fig-cap: Temporal pattern of mean coral cover (%) by data‐tiers in the American Samoa (2015–2023). White gaps represent missing data.
+#| fig-cap: Temporal pattern of mean coral cover (%) by data cells in the American Samoa (2015–2023). White gaps represent missing data.
 plots_hov[[1]]
 ```
 
@@ -694,8 +696,19 @@ plots_hov[[1]]
 #| echo: false
 #| eval: true
 #| label: fig-dist-1
-#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all‐tier and data‐tier for each year between 2015 and 2023 (in the case of data‐tier, the proportion is calculated with respect to the number of all‐tiers). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
+#| fig-cap: Proportion of regional areas affected by disturbances across two data levels all-cells and data-cells for each year between 2015 and 2023 (in the case of data-cells, the proportion is calculated with respect to the number of all-cells). Colours indicate a) average Degree Heating Weeks (DHW) and b) average exposure to cyclone waves. 
 dist_shallow
+```
+```{r, fig.width=6, fig.height=6}
+#| label: fig-corr1
+#| eval: true
+#| echo: false
+#| fig-cap: Correlation matrix of cyclone-exposure and heat-stress predictors at lag 0 years. Numbers indicate Pearson correlation coefficients calculated using pairwise complete observations, and variables are ordered using hierarchical clustering with highly correlated variables grouped together. The figure was used to identify highly collinear predictors (|r| > 0.7) and inform model variable selection.
+  
+print_attr_plots_level1(
+  appendix_dir = appendix_dir,
+  name_plot = "correlation_plot_1786"
+)
 ```
 
 ```{r}
@@ -899,7 +912,7 @@ ggsave(p0.3, filename = "../figures/pred_tier_example3.png",
 #| echo: false
 #| eval: false
 #| label: fig-pred-data
-#| fig-cap: Examples of three data-tiers with estimated coral trends from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals. Dots show observed coral cover averaged at the tier level for each year, which were used as the response variable in the spatio-temporal model. 
+#| fig-cap: Examples of three data-cells with estimated coral trends from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating the 95%predictive intervals. Dots show observed coral cover averaged at the cell level for each year, which were used as the response variable in the spatio-temporal model. 
 p_data
 ```
 ```{r, fig.width=8, fig.height=6}
@@ -907,7 +920,7 @@ p_data
 #| echo: false
 #| eval: false
 #| label: fig-pred-datano
-#| fig-cap: Examples of estimated coral trends at predictive-tiers from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
+#| fig-cap: Examples of estimated coral trends at predictive-cells from 2015 to 2023. Black lines represent mean predicted coral cover, with shaded areas indicating predictive intervals.
 p_datano
 ```
 
@@ -1400,7 +1413,7 @@ p_Tutuila_paper <- p_tul + p_unc_tul  +
   plot_annotation(
     tag_levels = "a", 
     tag_suffix = ')', 
-    title = "Tutuila island",
+    title = "Tutuila subregion",
     theme = theme(
       plot.title = element_text(size = 20, hjust = 0.5)))
 
@@ -1462,7 +1475,7 @@ ggsave(p_diff_ASM , filename = "../figures/ASM_diff.png",
 #| echo: false
 #| eval: true
 #| label: fig-pred-1
-#| fig-cap:  a) Predicted coral cover values across Tutuila island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
+#| fig-cap:  a) Predicted coral cover values across Tutuila subregion and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_Tutuila
 ```
 
@@ -1474,7 +1487,7 @@ p_Tutuila
 #| echo: false
 #| eval: true
 #| label: fig-pred-2
-#| fig-cap:  a) Predicted coral cover values across Ofu-Olosega island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
+#| fig-cap:  a) Predicted coral cover values across Ofu-Olosega subregion and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
 p_OO
 ```
 
@@ -1485,7 +1498,7 @@ p_OO
 #| echo: false
 #| eval: true
 #| label: fig-pred-3
-#| fig-cap:  a) Predicted coral cover values across Ta‘ū island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
+#| fig-cap:  a) Predicted coral cover values across Ta‘ū subregion and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_T 
 ```
 
@@ -1496,7 +1509,7 @@ p_T
 #| echo: false
 #| eval: true
 #| label: fig-pred-4
-#| fig-cap:  a) Predicted coral cover values across Rose Atoll and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
+#| fig-cap:  a) Predicted coral cover values across Rose Atoll subregion and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively.    
 p_RA  
 ```
 
@@ -1507,13 +1520,13 @@ p_RA
 #| echo: false
 #| eval: true
 #| label: fig-pred-5
-#| fig-cap:  a) Predicted coral cover values across Swains Island and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
+#| fig-cap:  a) Predicted coral cover values across Swains Island subregion and b) associated uncertainty range for each year between 2015-2023. Values correspond to their psoterior means and the lower and upper bounds of the 95% posterior credible intervals, respectively. 
 p_SI 
 ```
 
 ### Association with Disturbances {.unnumbered}
 
-In American Samoa, cyclone exposure was negatively associated with regional coral cover, with 95% prediction intervals not overlapping zero (@fig-cond-dist-1). The absolute decline between the minimum and maximum observed cyclone exposure, corresponds to a 16.1% reduction in coral cover (95% prediction interval: −27.8% to -1.2%, @fig-cond-all-1). 
+In American Samoa, cyclone exposure was negatively associated with coral cover change, with 95% prediction intervals not overlapping zero (@fig-cond-dist-1). The absolute decline between the minimum and maximum observed cyclone exposure, corresponds to a 16.1% reduction in coral cover (95% prediction interval: −27.8% to -1.2%, @fig-cond-all-1). 
 
 Spatially, increasing magnitude of cyclone exposure alone (i.e., excluding heat stress) contributed to regional declines in coral cover (@fig-cond-space-1), with absolute losses estimated to range from 4.1% to 27.0%, and a regional average decline of 15.8% (@fig-cond-space-change-1).  
 
@@ -1554,9 +1567,9 @@ combined_plot_ASM
 p_diff_ASM
 ```
 
-### Model validation {.unnumbered}
+### Model diagnostics {.unnumbered}
 
-#### Model fit {.unnumbered}
+#### Model goodness-of-fit {.unnumbered}
 
 ```{r}
 #| include: false
@@ -1578,7 +1591,7 @@ ggsave(combined_plot_fit, filename = "../figures/models_fit.png",
 #| label: fig-r-squared
 #| eval: true
 #| echo: false
-#| fig-cap:  Model goodness-of-fit for the three regions. Coral cover observations at the tier-level were used to fit the spatio-temporal models. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line.    
+#| fig-cap:  Model goodness-of-fit for the American Samoa region. Coral cover observations at data-cells were used to fit the spatio-temporal models. The R² statistic measures how well the predicted values reproduce the observations, with values closer to 1 indicating a better fit along the 1:1 red dotted line.    
 combined_plot_fit
 ``` 
 
@@ -1600,6 +1613,6 @@ ggsave(res1, filename = "../figures/model_res.png",
 #| label: fig-mod-res
 #| eval: true
 #| echo: false
-#| fig-cap: QQ plot residuals diagnostic.     
+#| fig-cap: QQ plot residuals, dispersion and deviation diagnostics.     
 res1
 ``` 

@@ -1,3 +1,23 @@
+## Grab png files associated with name_plot 
+
+print_attr_plots_level1 <- function(appendix_dir, name_plot) {
+
+
+  # List files matching the pattern in the specified path
+  file_mod <- list.files(path = appendix_dir, pattern = name_plot, full.names = TRUE)
+  
+  # Generate plots for each file
+  p_mod <- lapply(file_mod, function(file_mod) {
+    ggplot2::ggplot() +
+      ggplot2::annotation_custom(grid::rasterGrob(png::readPNG(file_mod), interpolate = TRUE)) +
+      ggplot2::theme_void() 
+  })
+  
+  # Combine the plots using patchwork
+  combined_mod <- patchwork::wrap_plots(p_mod, ncol = 1)
+  return(combined_mod)
+}
+
 #############################################
 ######### Run predictive model
 #############################################
@@ -44,17 +64,41 @@ select_lowest_lag <- function(var1, var2, group1, group2) {
       return(c(var1, var2))
     }
   }
-  
+   
 filter_non_collinear <- function(df, vars, threshold = 0.7) {
   
-  vars_valid <- vars[
-  sapply(df[vars], function(x) {
-    x <- x[complete.cases(df[vars])]
-    sd(x, na.rm = TRUE) > 0
-  })
-]
-  m_coll <- cor(df[vars_valid], use = "pairwise.complete.obs")
+  m_coll <- cor(df[vars], use = "pairwise.complete.obs")
   
+  #### Plot
+plot_names <- colnames(m_coll) %>%
+  purrr::map_chr(~{
+    
+    lag <- case_when(
+      str_detect(.x, "lag1") ~ "1",
+      str_detect(.x, "lag2") ~ "2",
+      TRUE                   ~ "0"
+    )
+    
+    disturbance <- case_when(
+      str_detect(.x, "cyc") ~ "Cyclone Exposure",
+      str_detect(.x, "dhw") ~ "Heat Stress",
+      TRUE                  ~ .x
+    )
+    
+    paste0(disturbance, " (lag ", lag, ")")
+  })
+
+   m_coll_plot <- m_coll
+   rownames(m_coll_plot) <- plot_names
+   colnames(m_coll_plot) <- plot_names
+
+  p_cor <- ggcorrplot(
+  m_coll_plot,
+  hc.order = TRUE,
+  type = "lower",
+  lab = TRUE
+  )
+
   corr_long <- as.data.frame(as.table(m_coll)) %>%
     filter(Var1 != Var2) %>%
     filter(abs(Freq) > threshold) %>%
@@ -65,7 +109,7 @@ filter_non_collinear <- function(df, vars, threshold = 0.7) {
       TRUE ~ "other"
     ))
 
-  if(nrow(corr_long) == 0) return( vars_valid)
+  if(nrow(corr_long) == 0) return(list(vars = vars, corr_plot = p_cor))
   
   corr_long <- corr_long %>%
     rowwise() %>%
@@ -85,7 +129,7 @@ filter_non_collinear <- function(df, vars, threshold = 0.7) {
   
   final_vars <- unique(c(corr_long$keep_var, non_flagged_vars))
   
-  return(final_vars)
+  return(list(vars = final_vars, corr_plot = p_cor))
 }
 
 make_reefid <- function(tier.sf.joined, HexPred_sf, reef_layer.sf) {
@@ -286,7 +330,7 @@ data_viz <- function(dat, title_n){
       limits = c(0, 70)
     ) +
     theme_minimal() +
-    labs(x = "Year", y = "Data-tiers") +
+    labs(x = "Year", y = "Data-cells") +
     ggtitle(sub("_.*", "", title_n)) +
     theme(
       plot.title = element_text(size = 13, hjust = 0.5),
@@ -340,7 +384,7 @@ make_disturbance_plot <- function(mod, var, dist_label, fill_name, palette_name,
     ) 
   
   # All tiers
-  dat_all <- summarise_disturbance(full_cov_plots, var, "all-tier")
+  dat_all <- summarise_disturbance(full_cov_plots, var, "all-cells")
   
   # Data tiers only
   dat_tier_year <- dat_coral %>%
@@ -350,7 +394,7 @@ make_disturbance_plot <- function(mod, var, dist_label, fill_name, palette_name,
   dat_data <- full_cov_plots %>%
     mutate(tier_year = paste(Tier5, fYEAR, sep = "_")) %>%
     filter(tier_year %in% dat_tier_year) %>%
-    summarise_disturbance(var, "data-tier")
+    summarise_disturbance(var, "data-cells")
   
   # Combine and prepare for plotting
   dat_plot <- bind_rows(dat_all, dat_data) %>%
@@ -383,7 +427,7 @@ make_disturbance_plot <- function(mod, var, dist_label, fill_name, palette_name,
     ) +
     labs(
       x = NULL,
-      y = paste0("Proportion of tiers with ", dist_label, " > 0")
+      y = paste0("Proportion of cells with ", dist_label, " > 0")
     ) +
     theme_minimal(base_size = 13) +
     theme(
@@ -925,10 +969,10 @@ label_params <- function(df) {
     filter(param != "(Intercept)") %>%
     mutate(
       param = dplyr::case_when(
-        param == "max_cyc"       ~ "Cyclone Exposure",
+        param == "max_cyc"       ~ "Cyclone Exposure (lag 0)",
         param == "max_cyc.lag1"  ~ "Cyclone Exposure (lag 1)",
         param == "max_cyc.lag2"  ~ "Cyclone Exposure (lag 2)",
-        param == "max_dhw"       ~ "Heat Stress",
+        param == "max_dhw"       ~ "Heat Stress (lag 0)",
         param == "max_dhw.lag1"  ~ "Heat Stress (lag 1)",
         param == "max_dhw.lag2"  ~ "Heat Stress (lag 2)",
         TRUE ~ param
@@ -1016,10 +1060,10 @@ plot_conditional_time <- function(mod_obj, mod_name, save_dir = "../figures") {
   
   # List of variables to plot with labels
   plot_vars <- list(
-    max_dhw = "Heat Stress",
+    max_dhw = "Heat Stress (lag 0)",
    # max_dhw.lag1 = "Heat Stress (lag 1)",
   #  max_dhw.lag2 = "Heat Stress (lag 2)",
-    max_cyc = "Cyclone Exposure"
+    max_cyc = "Cyclone Exposure (lag 0)"
   #  max_cyc.lag1 = "Cyclone Exposure (lag 1)",
   #  max_cyc.lag2 = "Cyclone Exposure (lag 2)"
   )
@@ -1100,28 +1144,7 @@ predict_newdata <- function(mod_M, new_BAU_data, hexpred, obj_frk, title_n, max_
            location = "bl",        
            width_hint = 0.3
   )
-
-# p_insert <- ggplot(pred_sum_sf, aes(x = pred * 100, y = "", fill = ..x..)) +
-#   geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
-#   scale_fill_gradientn(
-#     colours = pal_pred,
-#     name = "Predicted coral cover (%)",
-#     limits = c(0, 70)
-#   ) +
-#   labs(x = NULL, y = NULL) +
-#   theme_pubr() +
-#   theme(
-#     legend.position = "none",
-#     axis.title = element_blank(),
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.line = element_blank()
-#   )
-
-# p_all <- p +
-#   inset_element(p_insert, 0.6, 0.6, 1, 1) 
-
-  return(list(p, pred_sum_sf)) # p_insert,  
+  return(list(p, pred_sum_sf)) 
 }
 
 predict_year_island <- function(mod_M, new_BAU_data, hexpred, obj_frk, 
@@ -1227,7 +1250,7 @@ predict_year_island <- function(mod_M, new_BAU_data, hexpred, obj_frk,
 
 plot_diff <- function(pred_high, pred_low,  title_n){
 diff_pred <- pred_high %>%
-  st_drop_geometry() %>%                # remove geometry before join
+  st_drop_geometry() %>%          
   select(Tier5, pred_high = pred) %>%
   left_join(
     pred_low %>%
@@ -1241,8 +1264,6 @@ diff_pred <- pred_high %>%
 diff_sf <- pred_high %>%
   select(Tier5, geometry) %>%
   left_join(diff_pred, by = "Tier5")
-
-#pal_pred <- LaCroixColoR::lacroix_palette("Pamplemousse", n = 100, type = "continuous")
 
 p <- ggplot() + 
   geom_sf(data = diff_sf, 
@@ -1368,8 +1389,6 @@ mean_obs <- mod$data.grp.tier  %>%
 make_FRK_dharma_res <- function(mod) {
   # Observed response
   response_df <- mod$data.grp.tier %>% 
-   # group_by(fYEAR, Tier5) %>% 
-   # summarize(COUNT = sum(COUNT), k = sum(TOTAL))  %>% 
     mutate(fYEAR = as.factor(fYEAR), Tier5 = as.factor(Tier5))
 
   # Simulated response 

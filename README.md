@@ -1,4 +1,4 @@
-Reproducible study results
+Reproducible Analyses 
 =========================================================================================
 
 <!-- badges: start -->
@@ -13,12 +13,11 @@ Reproducible study results
 
 ## Content 
 
-This repository contains the results presented in the paper “Predicting coral trends from local to broad spatial scales” by Vercelloni et al. 
+This repository contains the results presented in the paper “Predicting coral cover trends from local to broad spatial scales” by Vercelloni et al. 
 
-`Appendix_A.html` can be also reproduced by rendering the quarto document located in `Appendix_A` folder. 
+`Appendix_A.html` contains the simulation experiments. The results are fully reproducible by rendering the Quarto document located in the `Appendix_A` folder. 
 
-
-The files `Appendix_B.html` and `Appendix_C.html` correspond to the manuscript appendices. They can be reproduced by rendering the quarto documents located in the `scripts/` directories. 
+The files `Appendix_B.html` and `Appendix_C.html` contain the use case studies. The analyses and results can be fully reproduced by rendering the corresponding Quarto documents located in the `scripts/` directories. 
 
 ## Data tables 
 
